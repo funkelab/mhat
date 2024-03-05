@@ -6,6 +6,7 @@ import zarr
 from pathlib import Path
 import logging
 import numpy as np
+from darts_experiments.utils.data import get_raw_data
 
 logger = logging.getLogger(__name__)
 
@@ -19,42 +20,15 @@ def visualize_data(
         data_base_path: str,
         fov: int,
         channels: list[str],
-        start_time=None,
-        end_time=None,
 ):
     print("visualizing data")
-    # open dataset
-    dataset_path = data_base_path / dataset_name
-    if not dataset_path.exists():
-        raise ValueError(f"No data found at {dataset_path}.")
-    raw_data_path = dataset_path / "raw.zarr"
-    if not raw_data_path.exists():
-        raise ValueError(f"No data found at {raw_data_path}.")
-    root = zarr.open(raw_data_path, 'r')
+    raw_data: dict[str, zarr.array] = get_raw_data(
+        data_base_path, dataset_name, fov=fov, channels=channels
+    )
+    for name, data in raw_data.items():
 
-    if not fov:
-        # pick first one available
-        fovs = list(root.group_keys())
-        fov_str = fovs[0]
-        fov = fov_str.split("=")[1]
-    else:
-        fov_str = f"fov={fov}"
-    fov_group = root[fov_str]
-
-    print(channels)
-    if not channels:
-        channel_strs = list(fov_group.array_keys())
-        channels = [cs.split("=")[1] for cs in channel_strs]
-    else:
-        channel_strs = [f"channel={channel}" for channel in channels]
-
-    for channel_str, channel in zip(channel_strs, channels):
-        channel_ds = fov_group[channel_str]
-        print(
-            f"DS {dataset_name} fov {fov} channel {channel} shape {channel_ds.shape}"
-        )
         layer = ng.LocalVolume(
-            data=channel_ds, 
+            data=data, 
             dimensions = ng.CoordinateSpace(
                 names=["t","c^", "y", "x"],
                 units=["s","", "nm", "nm"],
@@ -63,7 +37,7 @@ def visualize_data(
             volume_type="image",
         )
         viewer_context.layers.append(
-            name=f"{dataset_name}_fov={fov}_channel={channel}",
+            name=name,
             layer=layer
         )
     return viewer
@@ -78,8 +52,6 @@ if __name__ == "__main__":
         help="Channel to view. Options: BF, YFP-DUAL",
     )
     parser.add_argument("-dbp", "--data_base_path", default="/Volumes/funke/data/darts")
-    parser.add_argument("--start_time", type=int)
-    parser.add_argument("--end_time", type=int)
     args = parser.parse_args()
     #ngcli.handle_server_arguments(args)
     ng.set_server_bind_address(bind_address='localhost', bind_port=8080)
@@ -103,8 +75,6 @@ if __name__ == "__main__":
                 data_base_path = base_path,
                 fov=args.fov,
                 channels=args.channels,
-                start_time = args.start_time,
-                end_time = args.end_time,
             )
         url = str(viewer)
         print(url)
