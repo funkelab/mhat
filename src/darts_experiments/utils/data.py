@@ -1,5 +1,6 @@
 from pathlib import Path
 import zarr
+import argparse
 
 
 def get_raw_data(
@@ -66,3 +67,15 @@ def get_raw_data(
         f"{dataset_name}_{fov_str}_{channel_str}" : fov_group[channel_str]
         for channel_str in channel_strs
     }
+
+def add_data_args(parser: argparse.ArgumentParser, base_path_default="/Volumes/funke/data/darts"):
+    group = parser.add_argument_group("Data arguments")
+    group.add_argument("-d", "--dataset_name", help = "Dataset: name")
+    group.add_argument(
+        "-f", "--fov", type=int, 
+        help="Dataset: field of view (currently only supports one)")
+    group.add_argument(
+        "-c", "--channels", type=str, nargs="+",
+        help="Dataset: Channels to view. See spreadsheet 'Channel names' column for options",
+    )
+    group.add_argument("-dbp", "--data_base_path", default=base_path_default)

@@ -6,7 +6,7 @@ import zarr
 from pathlib import Path
 import logging
 import numpy as np
-from darts_experiments.utils.data import get_raw_data
+from darts_experiments.utils.data import get_raw_data, add_data_args
 
 logger = logging.getLogger(__name__)
 
@@ -45,13 +45,7 @@ def visualize_data(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     ngcli.add_server_arguments(parser)
-    parser.add_argument("-d", "--dataset_name", help = "name of dataset to visualize")
-    parser.add_argument("-f", "--fov", type=int, help="FOV to view")
-    parser.add_argument(
-        "-c", "--channels", type=str, nargs="+",
-        help="Channel to view. Options: BF, YFP-DUAL",
-    )
-    parser.add_argument("-dbp", "--data_base_path", default="/Volumes/funke/data/darts")
+    add_data_args(parser)
     args = parser.parse_args()
     #ngcli.handle_server_arguments(args)
     ng.set_server_bind_address(bind_address='localhost', bind_port=8080)
