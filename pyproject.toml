@@ -1,0 +1,37 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools", "wheel"]
+
+[project]
+name = "darts_experiments"
+description = "Experiments and scripts for DARTS project: mother machine cell segmentation and tracking."
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+  "Programming Language :: Python :: 3",
+]
+keywords = []
+license = { text = "BSD 3-Clause License" }
+authors = [
+    { email = "malinmayorc@janelia.hhmi.org", name = "Funke Lab" },
+]
+dynamic = ["version"]
+dependencies = [
+  "neuroglancer",
+  "argparse",
+  "zarr",
+]
+
+[project.optional-dependencies]
+dev = [
+  'pytest',
+  'pytest-cov',
+  'black',
+  'mypy',
+  'pdoc',
+  'pre-commit'
+]
+
+[project.urls]
+homepage = "https://github.com/funkelab/darts_experiments"
+repository = "https://github.com/funkelab/darts_experiments"
