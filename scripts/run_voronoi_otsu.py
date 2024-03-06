@@ -1,10 +1,12 @@
-from darts_experiments.segmentation.voronoi_otsu import voronoi_otsu_labeling
-from darts_experiments.utils.data import get_raw_data, add_data_args
 import argparse
 from pathlib import Path
-import zarr
+
 import git
 import numpy as np
+import zarr
+from darts_utils.data.raw_data import add_data_args, get_raw_data
+from darts_utils.experiment_metadata import get_experiment_metadata
+from darts_utils.segmentation.voronoi_otsu import voronoi_otsu_labeling
 
 
 def segment_data(
@@ -42,9 +44,8 @@ def segment_data(
     #           fov=<fov> (group)
     #               channel=<channel> (array)
     output_base_path = Path(output_base_path)
-    assert (
-        output_base_path.exists()
-    ), f"Output base path {output_base_path} does not exist."
+    if not output_base_path.exists():
+        raise ValueError(f"Output base path {output_base_path} does not exist.")
     output_dataset_path = output_base_path / dataset_name
     if not output_dataset_path.exists():
         print(f"Making output directory at {output_dataset_path}")
@@ -77,12 +78,9 @@ def segment_data(
         if exp_metadata:
             channel_arr.attrs.update(**exp_metadata)
         for i, frame in enumerate(data):
-            print(f"frame max: {frame.max()}")
             labeling = voronoi_otsu_labeling(
                 frame.squeeze(), spot_sigma=spot_sigma, outline_sigma=outline_sigma
             )
-            print(labeling.max())
-            print(labeling.astype(np.uint16).max())
             channel_arr[i, 0] = labeling.astype(np.uint16)
 
 
@@ -108,5 +106,5 @@ if __name__ == "__main__":
         spot_sigma=2,
         outline_sigma=1,
         overwrite=args.overwrite,
-        exp_metadata={"git_hash": sha},
+        exp_metadata=get_experiment_metadata(),
     )

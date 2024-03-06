@@ -1,13 +1,13 @@
+import argparse
+import logging
+import webbrowser
+from pathlib import Path
+
 import neuroglancer as ng
 import neuroglancer.cli as ngcli
-import argparse
-import webbrowser
 import zarr
-from pathlib import Path
-import logging
-import numpy as np
-from darts_utils.utils.data import get_raw_data, add_data_args
-from darts_utils.utils.segmentation_storage import get_segmentation
+from darts_utils.data.raw_data import add_data_args, get_raw_data
+from darts_utils.data.segmentation_storage import get_segmentation
 
 logger = logging.getLogger(__name__)
 
@@ -81,16 +81,12 @@ if __name__ == "__main__":
     viewer = ng.Viewer()
     base_path = Path(args.data_base_path)
     if not args.dataset_name:
-        print(list(base_path.iterdir()))
-        print(list(base_path.iterdir())[0].is_dir())
-        print(list(base_path.iterdir())[0].name)
         datasets = [s.name for s in base_path.iterdir() if s.is_dir()]
         print(datasets)
     else:
         datasets = [args.dataset_name]
 
     for ds_name in datasets:
-        print(ds_name)
         with viewer.txn() as s:
             visualize_data(
                 s,
