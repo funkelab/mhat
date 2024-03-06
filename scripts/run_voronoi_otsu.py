@@ -95,8 +95,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     add_data_args(parser)
     parser.add_argument(
-        "-obp",
-        "--output_base_path",
+        "-sbp",
+        "--segmentation_base_path",
         default="/Volumes/funke/projects/darts/experiments/segmentation",
     )
     parser.add_argument("--overwrite", type=bool, default=False)
@@ -117,7 +117,7 @@ if __name__ == "__main__":
             args.data_base_path,
             fov=args.fov,
             channels=args.channels,
-            output_base_path=args.output_base_path,
+            output_base_path=args.segmentation_base_path,
             result_name="voronoi_otsu",
             spot_sigma=2,
             outline_sigma=1,

@@ -21,6 +21,7 @@ dependencies = [
   "argparse",
   "zarr",
   "scikit-image",
+  "gitpython",
 ]
 
 [project.optional-dependencies]
