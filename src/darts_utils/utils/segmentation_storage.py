@@ -1,14 +1,15 @@
 from pathlib import Path
+from typing import Optional
+
 import zarr
-import argparse
 
 
 def get_segmentation(
     base_path: str | Path,
     dataset_name: str,
     result_name: str,
-    fov: int = None,
-    channels: list[str] = None,
+    fov: Optional[int] = None,
+    channels: Optional[list[str]] = None,
 ) -> dict[tuple[str, str, str, str], zarr.Array]:
     base_path = Path(base_path)
     dataset_path = base_path / dataset_name

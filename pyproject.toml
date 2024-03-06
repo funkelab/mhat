@@ -36,3 +36,21 @@ dev = [
 [project.urls]
 homepage = "https://github.com/funkelab/darts_experiments"
 repository = "https://github.com/funkelab/darts_experiments"
+
+# https://github.com/charliermarsh/ruff
+[tool.ruff]
+line-length = 88
+target-version = "py38"
+
+[tool.ruff.lint]
+extend-select = [
+    "E",    # style errors
+    "F",    # flakes
+    "I001", # isort
+    "U",    # pyupgrade
+    "S",    # bandit
+    "C",    # flake8-comprehensions
+    "B",    # flake8-bugbear
+    "A001", # flake8-builtins
+    "RUF",  # ruff-specific rules
+]

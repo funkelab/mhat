@@ -1,19 +1,16 @@
-from skimage.io import imread
-from skimage.filters import gaussian
-from skimage import data
 import numpy as np
-
-from skimage.morphology import local_maxima, local_minima
+from skimage.filters import gaussian
 from skimage.filters import threshold_otsu as sk_threshold_otsu
 from skimage.measure import label
+from skimage.morphology import local_maxima
 from skimage.segmentation import watershed
 
 
 def voronoi_otsu_labeling(image, spot_sigma: float = 2, outline_sigma: float = 1):
     """Copied from napari-segment-blobs-and-things-with-membranes
     https://github.com/haesleinhuepf/napari-segment-blobs-and-things-with-membranes/blob/2f04ac40383ff1c7df390e21975584f6dad64c11/napari_segment_blobs_and_things_with_membranes/__init__.py#L516
-    Voronoi-Otsu-Labeling is a segmentation algorithm for blob-like structures such as nuclei and
-    granules with high signal intensity on low-intensity background.
+    Voronoi-Otsu-Labeling is a segmentation algorithm for blob-like structures such as
+    nuclei and granules with high signal intensity on low-intensity background.
 
     Args:
         image (np.ndarrray): _description_

@@ -1,13 +1,15 @@
-from pathlib import Path
-import zarr
 import argparse
+from pathlib import Path
+from typing import Optional
+
+import zarr
 
 
 def get_raw_data(
     base_path: str | Path,
     dataset_name: str,
-    fov: int = None,
-    channels: list[str] = None,
+    fov: Optional[int] = None,
+    channels: Optional[list[str]] = None,
 ) -> dict[tuple[str, str, str], zarr.Array]:
     """Get the zarr array containing the raw data. Performs error checking if values
     are incorrect. If fov not provided, automatically load first one. If channels
@@ -30,9 +32,9 @@ def get_raw_data(
         ValueError: If provided channels not present in zarr
 
     Returns:
-        dict[str, zarr.Array]: A map from data_name ({ds_name}_fov={fov}_channel={channel})
-            to zarr array containing data. These are lazy and thus not loaded into
-            memory until accessed.
+        dict[str, zarr.Array]: A map from data_name
+            ({ds_name}_fov={fov}_channel={channel}) to zarr array containing data.
+            These are lazy and thus not loaded into memory until accessed.
     """
     base_path = Path(base_path)
     dataset_path = base_path / dataset_name
@@ -85,6 +87,7 @@ def add_data_args(
         "--channels",
         type=str,
         nargs="+",
-        help="Dataset: Channels to view. See spreadsheet 'Channel names' column for options",
+        help="Dataset: Channels to view. See spreadsheet 'Channel names' column "
+        "for options",
     )
     group.add_argument("-dbp", "--data_base_path", default=base_path_default)
