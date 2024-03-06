@@ -74,6 +74,11 @@ def segment_data(
             fov_group = result_group.create_group(fov_str, overwrite=overwrite)
         else:
             fov_group = result_group[fov_str]
+
+        if channel_str in fov_group.array_keys() and not overwrite:
+            print(f"Result already present for {dataset_name}, skipping.")
+            return
+
         channel_arr = fov_group.create_dataset(
             channel_str, shape=data.shape, dtype="uint16", overwrite=overwrite
         )
