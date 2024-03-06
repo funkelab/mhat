@@ -8,7 +8,7 @@ def get_raw_data(
     dataset_name: str,
     fov: int = None,
     channels: list[str] = None,
-) -> dict[str, zarr.Array]:
+) -> dict[tuple[str, str, str], zarr.Array]:
     """Get the zarr array containing the raw data. Performs error checking if values
     are incorrect. If fov not provided, automatically load first one. If channels
     not provided, return all of them.
@@ -41,7 +41,7 @@ def get_raw_data(
     raw_data_path = dataset_path / "raw.zarr"
     if not raw_data_path.exists():
         raise ValueError(f"No data found at {raw_data_path}.")
-    root = zarr.open(raw_data_path, 'r')
+    root = zarr.open(raw_data_path, "r")
 
     if not fov:
         # pick first one available
@@ -60,22 +60,31 @@ def get_raw_data(
     else:
         channel_strs = [f"channel={channel}" for channel in channels]
         for channel_str in channel_strs:
-            if channel_str not in fov_group.channels():
+            if channel_str not in fov_group.array_keys():
                 raise ValueError(f"{channel_str} not present in {dataset_name}")
 
     return {
-        f"{dataset_name}_{fov_str}_{channel_str}" : fov_group[channel_str]
+        (dataset_name, fov_str, channel_str): fov_group[channel_str]
         for channel_str in channel_strs
     }
 
-def add_data_args(parser: argparse.ArgumentParser, base_path_default="/Volumes/funke/data/darts"):
+
+def add_data_args(
+    parser: argparse.ArgumentParser, base_path_default="/Volumes/funke/data/darts"
+):
     group = parser.add_argument_group("Data arguments")
-    group.add_argument("-d", "--dataset_name", help = "Dataset: name")
+    group.add_argument("-d", "--dataset_name", help="Dataset: name")
     group.add_argument(
-        "-f", "--fov", type=int, 
-        help="Dataset: field of view (currently only supports one)")
+        "-f",
+        "--fov",
+        type=int,
+        help="Dataset: field of view (currently only supports one)",
+    )
     group.add_argument(
-        "-c", "--channels", type=str, nargs="+",
+        "-c",
+        "--channels",
+        type=str,
+        nargs="+",
         help="Dataset: Channels to view. See spreadsheet 'Channel names' column for options",
     )
     group.add_argument("-dbp", "--data_base_path", default=base_path_default)
