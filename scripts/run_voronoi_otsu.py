@@ -37,6 +37,8 @@ def segment_data(
         if any(prefix in metadata[2] for prefix in fluorescent_prefixes)
     }
     print(raw_data.keys())
+    if not raw_data.keys():
+        return
     # prepare output zarr with structure:
     # <dataset_name> (directory)
     #   segmentation.zarr (root)
@@ -96,15 +98,24 @@ if __name__ == "__main__":
     repo = git.Repo(search_parent_directories=True)
     sha = repo.head.object.hexsha
     args = parser.parse_args()
-    segment_data(
-        args.dataset_name,
-        args.data_base_path,
-        fov=args.fov,
-        channels=args.channels,
-        output_base_path=args.output_base_path,
-        result_name="voronoi_otsu",
-        spot_sigma=2,
-        outline_sigma=1,
-        overwrite=args.overwrite,
-        exp_metadata=get_experiment_metadata(),
-    )
+    base_path = Path(args.data_base_path)
+    if not args.dataset_name:
+        datasets = [s.name for s in base_path.iterdir() if s.is_dir()]
+        print(datasets)
+    else:
+        datasets = [args.dataset_name]
+
+    for ds_name in datasets:
+        print(ds_name)
+        segment_data(
+            ds_name,
+            args.data_base_path,
+            fov=args.fov,
+            channels=args.channels,
+            output_base_path=args.output_base_path,
+            result_name="voronoi_otsu",
+            spot_sigma=2,
+            outline_sigma=1,
+            overwrite=args.overwrite,
+            exp_metadata=get_experiment_metadata(),
+        )
