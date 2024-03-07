@@ -62,9 +62,11 @@ def segment_data(
         root = zarr.open_group(store, mode="a")
 
     # make result group
-    result_group = root.create_group(
-        f"{result_name}_{spot_sigma}_{outline_sigma}", overwrite=overwrite
-    )
+    result_str = f"{result_name}_{spot_sigma}_{outline_sigma}"
+    if result_str not in root.group_keys():
+        result_group = root.create_group(result_str, overwrite=overwrite)
+    else:
+        result_group = root[result_str]
 
     for metadata, data in raw_data.items():
         _, fov_str, channel_str = metadata
@@ -76,7 +78,7 @@ def segment_data(
             fov_group = result_group[fov_str]
 
         if channel_str in fov_group.array_keys() and not overwrite:
-            print(f"Result already present for {dataset_name}, skipping.")
+            print(f"Result already present for {dataset_name} {fov_str} {channel_str}, skipping.")
             return
 
         channel_arr = fov_group.create_dataset(
