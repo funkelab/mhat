@@ -243,7 +243,7 @@ class SegmentationZarr(DartsZarr):
                 which are assumed to be names of experimental results.
         """
         root = zarr.open_group(self.store, mode=self.mode)
-        return [DartsZarr._fov_from_key(k) for k in root.group_keys()]
+        return list(root.group_keys())
 
     def set_result_name(self, result_name: str):
         """Set the experimental result name to use for future operations
