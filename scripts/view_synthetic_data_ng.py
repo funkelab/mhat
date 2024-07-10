@@ -70,7 +70,7 @@ if __name__ == "__main__":
     parser.add_argument("-g", "--groups", nargs="+")
     ngcli.add_server_arguments(parser)
     args = parser.parse_args()
-    ng.set_server_bind_address(bind_address="localhost", bind_port=8080)
+    ng.set_server_bind_address(bind_address="0.0.0.0")
     base_path = Path(args.path_to_zarr)
 
     viewer = ng.Viewer()
