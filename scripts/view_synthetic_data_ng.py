@@ -4,12 +4,7 @@ from pathlib import Path
 
 import neuroglancer as ng
 import neuroglancer.cli as ngcli
-from darts_utils.data import (
-    RawDataZarr,
-    SegmentationZarr,
-    add_data_args,
-    add_segmentation_args,
-)
+
 import zarr
 import numpy as np
 
@@ -29,9 +24,9 @@ def visualize_image(
     layer = ng.LocalVolume(
         data=data,
         dimensions=ng.CoordinateSpace(
-            names=["t", "y", "x"],
-            units=["s", "nm", "nm"],
-            scales=[1, 1, 1],
+            names=["y", "x"],
+            units=["nm", "nm"],
+            scales=[1, 1],
         ),
         volume_type="image",
     )
@@ -54,9 +49,9 @@ def visualize_segmentation(
     layer = ng.LocalVolume(
         data=data,
         dimensions=ng.CoordinateSpace(
-            names=["t", "y", "x"],
-            units=["s", "nm", "nm"],
-            scales=[1, 1, 1],
+            names=["y", "x"],
+            units=["nm", "nm"],
+            scales=[1, 1],
         ),
         volume_type="segmentation",
     )
@@ -79,7 +74,7 @@ if __name__ == "__main__":
         print(group)
         data = root[group]
         print(data.shape)
-        if  np.issubdtype(data.dtype, np.integer):
+        if  group == "mask":
             with viewer.txn() as s:
                 visualize_segmentation(
                     s,
