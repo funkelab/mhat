@@ -24,9 +24,9 @@ def visualize_image(
     layer = ng.LocalVolume(
         data=data,
         dimensions=ng.CoordinateSpace(
-            names=["y", "x"],
-            units=["nm", "nm"],
-            scales=[1, 1],
+            names=["t", "y", "x"],
+            units=["s", "nm", "nm"],
+            scales=[1, 1, 1],
         ),
         volume_type="image",
     )
@@ -49,9 +49,9 @@ def visualize_segmentation(
     layer = ng.LocalVolume(
         data=data,
         dimensions=ng.CoordinateSpace(
-            names=["y", "x"],
-            units=["nm", "nm"],
-            scales=[1, 1],
+            names=["t", "y", "x"],
+            units=["s", "nm", "nm"],
+            scales=[1, 1, 1],
         ),
         volume_type="segmentation",
     )
