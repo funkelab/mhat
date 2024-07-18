@@ -1,11 +1,8 @@
 import gunpowder as gp
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import zarr
-from funlib.learn.torch.models import UNet, ConvPass
-from gunpowder.torch import Train
-from lsd.train.gp import AddLocalShapeDescriptor
+from darts_utils.segmentation import MtlsdModel, WeightedMSELoss
 from tqdm import tqdm
 
 voxel_size = gp.Coordinate((1, 1, 1))
@@ -15,94 +12,16 @@ output_shape = gp.Coordinate((3, 400, 36))
 input_size = input_shape * voxel_size
 output_size = output_shape * voxel_size
 
-class MtlsdModel(torch.nn.Module):
-
-    def __init__(
-        self,
-        in_channels,
-        num_fmaps,
-        fmap_inc_factor,
-        downsample_factors,
-        kernel_size_down,
-        kernel_size_up,
-        constant_upsample):
-  
-        super().__init__()
-
-        # create unet
-        self.unet = UNet(
-          in_channels=in_channels,
-          num_fmaps=num_fmaps,
-          fmap_inc_factor=fmap_inc_factor,
-          downsample_factors=downsample_factors,
-          kernel_size_down=kernel_size_down,
-          kernel_size_up=kernel_size_up,
-          constant_upsample=constant_upsample,
-          padding='same')
-
-        # create lsd and affs heads
-        self.lsd_head = ConvPass(num_fmaps, 10, [[1, 1, 1]], activation='Sigmoid')
-        self.aff_head = ConvPass(num_fmaps, 3, [[1, 1, 1]], activation='Sigmoid')
-
-    def forward(self, input):
-
-        # pass raw through unet
-        z = self.unet(input)
-
-        # pass output through heads
-        lsds = self.lsd_head(z)
-        affs = self.aff_head(z)
-
-        return lsds, affs
-
-# combine the lsds and affs losses
-
-class WeightedMSELoss(torch.nn.MSELoss):
-    def __init__(self):
-        super(WeightedMSELoss, self).__init__()
-
-    def _calc_loss(self, pred, target, weights):
-
-        scaled = weights * (pred - target) ** 2
-
-        if len(torch.nonzero(scaled)) != 0:
-            mask = torch.masked_select(scaled, torch.gt(weights, 0))
-            loss = torch.mean(mask)
-
-        else:
-            loss = torch.mean(scaled)
-
-        return loss
-
-    def forward(
-        self,
-        lsds_prediction,
-        lsds_target,
-        lsds_weights,
-        affs_prediction,
-        affs_target,
-        affs_weights,
-    ):
-
-        # calc each loss and combine
-        loss1 = self._calc_loss(lsds_prediction, lsds_target, lsds_weights)
-        loss2 = self._calc_loss(affs_prediction, affs_target, affs_weights)
-
-        return loss1 + loss2
-    
-def train(
-    iterations,
-    batch_size
-   ):
+def train(iterations, batch_size):
     
     phase = gp.ArrayKey('PHASE')
     mask = gp.ArrayKey('MASK')
     # gt_lsds = gp.ArrayKey('GT_LSDS')
     # lsds_weights = gp.ArrayKey('LSDS_WEIGHTS')
     # pred_lsds = gp.ArrayKey('PRED_LSDS')
-    gt_affs = gp.ArrayKey('GT_AFFS')
-    affs_weights = gp.ArrayKey('AFFS_WEIGHTS')
-    pred_affs = gp.ArrayKey('PRED_AFFS')
+    #gt_affs = gp.ArrayKey('GT_AFFS')
+    #affs_weights = gp.ArrayKey('AFFS_WEIGHTS')
+    #pred_affs = gp.ArrayKey('PRED_AFFS')
     
     request = gp.BatchRequest()
 
@@ -111,9 +30,9 @@ def train(
     # request.add(gt_lsds, output_size)
     # request.add(lsds_weights, output_size)
     # request.add(pred_lsds, output_size)
-    request.add(gt_affs, output_size)
-    request.add(affs_weights, output_size)
-    request.add(pred_affs, output_size)
+    #request.add(gt_affs, output_size)
+    #request.add(affs_weights, output_size)
+    #request.add(pred_affs, output_size)
 
     num_samples = 200
     num_fmaps = 16
@@ -137,12 +56,12 @@ def train(
     optimizer = torch.optim.Adam(lr=0.5e-4, params=model.parameters())
    
     phase_array_specs = gp.ArraySpec(
-        voxel_size=input_shape,
+        voxel_size=voxel_size,
         dtype=np.uint16,
         interpolatable=True
         )
     mask_array_specs = gp.ArraySpec(
-        voxel_size=input_shape,
+        voxel_size=voxel_size,
         dtype=np.uint64,
         interpolatable=False
         )
@@ -166,8 +85,6 @@ def train(
 
     pipeline += gp.RandomProvider()
 
-    #pipeline += gp.Normalize(phase)    
-
     pipeline += gp.SimpleAugment(
        mirror_only=None,
        transpose_only=None,
@@ -175,13 +92,21 @@ def train(
        transpose_probs=[0,0,0]
     )
 
+    pipeline += gp.NoiseAugment(
+        phase,
+        mode="gaussian",
+        var=0.125
+    )
+
     pipeline += gp.IntensityAugment(
         array=phase,
-        scale_min=0.9,
-        scale_max=1.1,
-        shift_min=-0.1,
-        shift_max=0.1
+        scale_min=0.5,
+        scale_max=1.5,
+        shift_min=-0.5,
+        shift_max=0.5
     )
+    
+    """
 
     # pipeline += AddLocalShapeDescriptor(
     #     mask,
@@ -224,15 +149,15 @@ def train(
             'affs_target': gt_affs,
             'affs_weights': affs_weights
         })
-
+    """
     with gp.build(pipeline):
         progress = tqdm(range(iterations))
         for i in progress:
             print(f'Training iteration {i}')
             batch = pipeline.request_batch(request)
-            zarr_group = zarr.create_group(f'/nrs/funke/data/darts/synthetic_data/debug/{i}.zarr', "w")
-            zarr_group['phase'] = batch[phase]
-            zarr_group['mask'] = batch[mask]
+            zarr_group = zarr.open_group(f'/nrs/funke/data/darts/synthetic_data/debug/{i}.zarr', "w")
+            zarr_group['phase'] = batch[phase].data
+            zarr_group['mask'] = batch[mask].data
 
             progress.set_description(f'Training iteration {i}') 
 

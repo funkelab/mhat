@@ -22,6 +22,10 @@ dependencies = [
   "zarr",
   "scikit-image",
   "gitpython",
+  "pytorch",
+  "pytorch-cuda=11.8",
+  "lsds",
+  "funlib.learn.torch",
 ]
 
 [project.optional-dependencies]
