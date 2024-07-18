@@ -1,7 +1,7 @@
 import logging
 
 import numpy as np
-from gunpowder import Array, Batch, BatchFilter, BatchRequest
+from gunpowder import Array, Batch, BatchFilter, BatchRequest, Coordinate, Roi
 from lsd.train import LsdExtractor
 
 logger = logging.getLogger(__name__)
@@ -97,7 +97,7 @@ class AddLocalShapeDescriptor(BatchFilter):
         self.context = None
         self.skip = False
 
-        self.extractor = LsdExtractor(self.sigma, self.mode, self.downsample)
+        self.extractor = LsdExtractor(self.sigma[1:], self.mode, self.downsample)
 
     def setup(self):
         spec = self.spec[self.segmentation].copy()
@@ -120,14 +120,14 @@ class AddLocalShapeDescriptor(BatchFilter):
     def prepare(self, request):
         deps = BatchRequest()
         if self.descriptor in request:
-            dims = 2
+            dims = len(request[self.descriptor].roi.get_shape())
 
             if dims == 2:
                 self.context = self.context[0:2]
 
             # increase segmentation ROI to fit Gaussian (in y and x)
             context_roi = request[self.descriptor].roi.grow(
-                0, self.context, self.context
+               self.context, self.context,
             )
 
             # ensure context roi is multiple of voxel size
@@ -155,40 +155,40 @@ class AddLocalShapeDescriptor(BatchFilter):
 
         descriptor_spec = self.spec[self.descriptor].copy()
         descriptor_spec.roi = request[self.descriptor].roi.copy()
-        print(f"{descriptor_spec.roi=}")
-        time_roi = descriptor_spec.roi.grow((0, None, None), (0, None, None))
-        print(f"{time_roi=}")
-
         segmentation_array = batch[self.segmentation]
-        print(f"{segmentation_array.spec.roi=}")
-        intersection_roi = time_roi.intersect(segmentation_array.spec.roi)
-        print(f"{intersection_roi=}")
         # get voxel roi of requested descriptors
         # this is the only region in
         # which we have to compute the descriptors
-        seg_roi = segmentation_array.spec.roi
-        descriptor_roi = request[self.descriptor].roi
+        seg_roi = segmentation_array.spec.roi   # with the context (-60, -60) offset
+        offset = seg_roi.get_offset()
+        seg_roi = seg_roi - offset # now starts at (0, 0)
+        descriptor_roi = request[self.descriptor].roi  # no context (0, 0) offset
+        descriptor_roi = descriptor_roi - offset # now starts at (60, 60)
         voxel_roi_in_seg = (
             seg_roi.intersect(descriptor_roi) - seg_roi.get_offset()
         ) / self.voxel_size
 
         crop = voxel_roi_in_seg.get_bounding_box()
+        
+        time_roi = descriptor_spec.roi.grow((0, None, None), (0, None, None))
 
-        print(f"{segmentation_array[intersection_roi].data.shape}=")
+        intersection_roi = time_roi.intersect(segmentation_array.spec.roi)
+        seg_data = segmentation_array.crop(intersection_roi).data
+
         descriptors = []
-        for seg_slice in segmentation_array[intersection_roi].data:
+        for time, seg_slice in enumerate(seg_data):
+            slice_roi = Roi(voxel_roi_in_seg.offset[1:], voxel_roi_in_seg.shape[1:])
+
             descriptor_slice = self.extractor.get_descriptors(
                 segmentation=seg_slice,
                 components=self.components,
-                voxel_size=self.voxel_size,
-                roi=voxel_roi_in_seg,
+                voxel_size=(1, 1),
+                roi=slice_roi,
             )
             # add back in time dimension
-            descriptor_slice = np.expand_dims(descriptor_slice, axis=0)
             descriptors.append(descriptor_slice)
 
-        descriptor = np.stack(descriptors, axis=0)
-        print(f"{descriptor.shape=}")
+        descriptor = np.stack(descriptors, axis=1)
         # create descriptor array
         descriptor_spec = self.spec[self.descriptor].copy()
         descriptor_spec.roi = request[self.descriptor].roi.copy()

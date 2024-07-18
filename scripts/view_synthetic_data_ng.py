@@ -14,12 +14,44 @@ logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s %(name)s %(levelname)-8s %(message)s"
 )
 
+rgb_shader_code = '''
+void main() {
+    emitRGB(
+        %f*vec3(
+            toNormalized(getDataValue(%i)),
+            toNormalized(getDataValue(%i)),
+            toNormalized(getDataValue(%i)))
+        );
+}'''
+
+def visualize_lsds(
+    viewer_context,
+    data,
+    name,
+):
+    shader = rgb_shader_code % (1.0, 0, 1, 2)
+    for i in range(0, data.shape[0], 3):
+        end_channel = min(i + 3, data.shape[0])
+        current_channels = data[i:end_channel]
+        layer = ng.LocalVolume(
+            data=current_channels,
+            dimensions=ng.CoordinateSpace(
+                names=["c^", "t", "y", "x"],
+                units=["", "s", "nm", "nm"],
+                scales=[1, 1, 1, 1],
+            ),
+            volume_type="image",
+        )
+        viewer_context.layers[name + f"_{i}-{end_channel}"] = ng.ImageLayer(
+            source=layer,
+            shader=shader,
+        )
+
 
 def visualize_image(
     viewer_context,
     data,
     name,
-
 ):
     layer = ng.LocalVolume(
         data=data,
@@ -74,12 +106,34 @@ if __name__ == "__main__":
         print(group)
         data = root[group]
         print(data.shape)
-        if  group == "mask":
+        if group == "mask":
             with viewer.txn() as s:
                 visualize_segmentation(
                     s,
                     data,
                     group
+                )
+        elif group in ["gt_affs", "affs_weights"] :
+            affs_y = data[0]
+            affs_x = data[1]
+            with viewer.txn() as s:
+                visualize_image(
+                    s,
+                    affs_x,
+                    group + "_x",
+                )
+                visualize_image(
+                    s,
+                    affs_y,
+                    group + "_y",
+                )
+
+        elif group == "gt_lsds":
+            with viewer.txn() as s:
+                visualize_lsds(
+                    s,
+                    data,
+                    group,
                 )
         else:
             with viewer.txn() as s:
