@@ -20,8 +20,8 @@ def train(iterations, batch_size):
     # gt_lsds = gp.ArrayKey('GT_LSDS')
     # lsds_weights = gp.ArrayKey('LSDS_WEIGHTS')
     # pred_lsds = gp.ArrayKey('PRED_LSDS')
-    # gt_affs = gp.ArrayKey('GT_AFFS')
-    # affs_weights = gp.ArrayKey('AFFS_WEIGHTS')
+    gt_affs = gp.ArrayKey('GT_AFFS')
+    affs_weights = gp.ArrayKey('AFFS_WEIGHTS')
     #pred_affs = gp.ArrayKey('PRED_AFFS')
     
     request = gp.BatchRequest()
@@ -31,8 +31,8 @@ def train(iterations, batch_size):
     # request.add(gt_lsds, output_size)
     # request.add(lsds_weights, output_size)
     # request.add(pred_lsds, output_size)
-    #request.add(gt_affs, output_size)
-    #request.add(affs_weights, output_size)
+    request.add(gt_affs, output_size)
+    request.add(affs_weights, output_size)
     #request.add(pred_affs, output_size)
 
     num_samples = 200
@@ -106,15 +106,6 @@ def train(iterations, batch_size):
         shift_max=0.5
     )
     
-
-    # pipeline += AddLocalShapeDescriptor(
-    #     mask,
-    #     gt_lsds,
-    #     lsds_mask=lsds_weights,
-    #     sigma=20,
-    # )
-
-    """
     pipeline += gp.AddAffinities(
         affinity_neighborhood=[
             [0, -1, 0],
@@ -124,6 +115,14 @@ def train(iterations, batch_size):
         dtype=np.float32,
         affinities_mask=affs_weights
         )
+    # pipeline += AddLocalShapeDescriptor(
+    #     mask,
+    #     gt_lsds,
+    #     lsds_mask=lsds_weights,
+    #     sigma=20,
+    # )
+
+    """
     
 
     pipeline += gp.Stack(batch_size)
@@ -158,8 +157,8 @@ def train(iterations, batch_size):
             zarr_group = zarr.open_group(f'/nrs/funke/data/darts/synthetic_data/debug/{i}.zarr', "w")
             zarr_group['phase'] = batch[phase].data
             zarr_group['mask'] = batch[mask].data
-            #zarr_group['gt_affs'] = batch[gt_affs].data
-            #zarr_group['affs_weights'] = batch[affs_weights].data
+            zarr_group['gt_affs'] = batch[gt_affs].data
+            zarr_group['affs_weights'] = batch[affs_weights].data
 
             progress.set_description(f'Training iteration {i}') 
 
