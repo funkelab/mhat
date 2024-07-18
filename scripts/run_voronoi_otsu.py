@@ -72,6 +72,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     add_data_args(parser)
     add_segmentation_args(parser)
+    parser.add_argument("--cluster", type=bool, default=False)
     parser.add_argument("--overwrite", type=bool, default=False)
     args = parser.parse_args()
 
@@ -83,6 +84,11 @@ if __name__ == "__main__":
     else:
         result_name = args.result_name
 
+    if args.cluster:
+        if args.data_base_path.startswith('/Volumes'):
+            args.data_base_path = args.data_base_path.replace('/Volumes', '/nrs')
+        if args.segmentation_base_path.startswith('/Volumes'):
+            args.segmentation_base_path = args.segmentation_base_path.replace('/Volumes', '/nrs')
     base_path = Path(args.data_base_path)
     if not args.dataset_name:
         datasets = [s.name for s in base_path.iterdir() if s.is_dir()]
