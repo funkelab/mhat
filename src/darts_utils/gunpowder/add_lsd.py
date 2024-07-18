@@ -195,6 +195,8 @@ class AddLocalShapeDescriptor(BatchFilter):
         descriptor_array = Array(descriptor, descriptor_spec)
 
         old_batch = batch
+        seg_roi = seg_roi + offset # now starts at (-60, -60)
+        descriptor_roi = descriptor_roi + offset # back to (0, 0)
 
         # Create new batch for descriptor:
         batch = Batch()

@@ -1,7 +1,6 @@
 import argparse
 import logging
 from pathlib import Path
-
 import neuroglancer as ng
 import neuroglancer.cli as ngcli
 
@@ -30,17 +29,18 @@ def visualize_lsds(
     name,
 ):
     shader = rgb_shader_code % (1.0, 0, 1, 2)
-    for i in range(0, data.shape[0], 3):
-        end_channel = min(i + 3, data.shape[0])
-        current_channels = data[i:end_channel]
+    for i in range(0, data.shape[1], 3):
+        end_channel = min(i + 3, data.shape[1])
+        current_channels = data[:, i:end_channel]
         layer = ng.LocalVolume(
             data=current_channels,
             dimensions=ng.CoordinateSpace(
-                names=["c^", "t", "y", "x"],
-                units=["", "s", "nm", "nm"],
-                scales=[1, 1, 1, 1],
+                names=["b", "c^", "t", "y", "x"],
+                units=["", "", "s", "nm", "nm"],
+                scales=[1, 1, 1, 1, 1],
             ),
             volume_type="image",
+        voxel_offset = [0, 0, 1, 0, 0]
         )
         viewer_context.layers[name + f"_{i}-{end_channel}"] = ng.ImageLayer(
             source=layer,
@@ -56,9 +56,9 @@ def visualize_image(
     layer = ng.LocalVolume(
         data=data,
         dimensions=ng.CoordinateSpace(
-            names=["t", "y", "x"],
-            units=["s", "nm", "nm"],
-            scales=[1, 1, 1],
+            names=["b", "t", "y", "x"],
+            units=["", "s", "nm", "nm"],
+            scales=[1, 1, 1, 1],
         ),
         volume_type="image",
     )
@@ -81,11 +81,12 @@ def visualize_segmentation(
     layer = ng.LocalVolume(
         data=data,
         dimensions=ng.CoordinateSpace(
-            names=["t", "y", "x"],
-            units=["s", "nm", "nm"],
-            scales=[1, 1, 1],
+            names=["b", "t", "y", "x"],
+            units=["", "s", "nm", "nm"],
+            scales=[1, 1, 1, 1],
         ),
         volume_type="segmentation",
+        voxel_offset = [0, 1, 0, 0]
     )
     
     viewer_context.layers.append(name=name, layer=layer)
@@ -128,20 +129,22 @@ if __name__ == "__main__":
                     group + "_y",
                 )
 
-        elif group == "gt_lsds":
+        elif group in ["gt_lsds", "pred_lsds"]:
             with viewer.txn() as s:
                 visualize_lsds(
                     s,
                     data,
                     group,
                 )
-        else:
+        elif group == "phase":
             with viewer.txn() as s:
                 visualize_image(
                     s,
                     data,
                     group
                 )
+        else:
+            raise ValueError(f"Couldn't visualize group {group}")
     url = str(viewer)
     print(url)
     input()

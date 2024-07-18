@@ -25,8 +25,8 @@ class MtlsdModel(torch.nn.Module):
           padding='same')
 
         # create lsd and affs heads
-        self.lsd_head = ConvPass(num_fmaps, 10, [[1, 1, 1]], activation='Sigmoid')
-        self.aff_head = ConvPass(num_fmaps, 3, [[1, 1, 1]], activation='Sigmoid')
+        self.lsd_head = ConvPass(num_fmaps, 6, [[1, 1]], activation='Sigmoid')
+        self.aff_head = ConvPass(num_fmaps, 2, [[1, 1]], activation='Sigmoid')
 
     def forward(self, input):
 
@@ -36,6 +36,9 @@ class MtlsdModel(torch.nn.Module):
         # pass output through heads
         lsds = self.lsd_head(z)
         affs = self.aff_head(z)
+        # add dummy time dimension
+        lsds = torch.unsqueeze(lsds, dim=2)
+        affs = torch.unsqueeze(affs, dim=2)
 
         return lsds, affs
 
@@ -67,9 +70,11 @@ class WeightedMSELoss(torch.nn.MSELoss):
         affs_target,
         affs_weights,
     ):
-
-        # calc each loss and combine
-        loss1 = self._calc_loss(lsds_prediction, lsds_target, lsds_weights)
+        print(f"{lsds_prediction.shape=}")
+        print(f"{lsds_target.shape=}")
+        print(f"{affs_prediction.shape=}")
+        print(f"{affs_target.shape=}")
+        loss1 = self._calc_loss(lsds_prediction, lsds_target,  lsds_weights)
         loss2 = self._calc_loss(affs_prediction, affs_target, affs_weights)
 
         return loss1 + loss2
