@@ -105,6 +105,7 @@ if __name__ == "__main__":
     root = zarr.open(base_path)
     for group in args.groups:
         print(group)
+        print(root.keys())
         data = root[group]
         print(data.shape)
         if group == "mask":
@@ -114,7 +115,7 @@ if __name__ == "__main__":
                     data,
                     group
                 )
-        elif group in ["gt_affs", "affs_weights"] :
+        elif group in ["gt_affs", "affs_weights", "pred_affs"] :
             affs_y = data[0]
             affs_x = data[1]
             with viewer.txn() as s:

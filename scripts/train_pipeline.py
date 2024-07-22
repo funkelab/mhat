@@ -7,6 +7,7 @@ from darts_utils.segmentation import MtlsdModel, WeightedMSELoss
 from darts_utils.gunpowder import AddLocalShapeDescriptor, NoiseAugment
 from tqdm import tqdm
 
+
 voxel_size = gp.Coordinate((1, 1, 1))
 input_shape = gp.Coordinate((3, 400, 36))
 output_shape = gp.Coordinate((1, 400, 36))
@@ -36,7 +37,7 @@ def train(iterations, batch_size):
     request.add(affs_weights, output_size)
     request.add(pred_affs, output_size)
 
-    num_samples = 200
+    num_samples = 1000
     num_fmaps = 16
     
     ds_fact = [(2,2),(2,2)]
@@ -146,23 +147,43 @@ def train(iterations, batch_size):
             'affs_prediction': pred_affs,
             'affs_target': gt_affs,
             'affs_weights': affs_weights
-        })
+        },
+        log_dir = './tensorboard_summaries/run3',
+        log_every = 1
+        )
+    
+    dataset_names = {
+    phase: 'phase',
+    mask: 'mask',
+    pred_lsds: 'pred_lsds',
+    gt_lsds: 'gt_lsds',
+    lsds_weights: 'lsds_weights',
+    pred_affs: 'pred_affs',
+    gt_affs: 'gt_affs',
+    affs_weights: 'affs_weights'
+    }
+
+    output_dir = '/nrs/funke/data/darts/synthetic_data/snapshots_folder/run3'
+    output_filename = 'Snapshot_{iteration}.zarr'
+    every = 1000
+    pipeline += gp.Snapshot(
+        dataset_names,
+        output_dir=output_dir,
+        output_filename=output_filename,
+        every=every,
+        additional_request=None,
+        compression_type=None,
+        dataset_dtypes=None,
+        store_value_range=False
+    )
+
     with gp.build(pipeline):
         progress = tqdm(range(iterations))
         for i in progress:
             print(f'Training iteration {i}')
-            batch = pipeline.request_batch(request)
-            zarr_group = zarr.open_group(f'/nrs/funke/data/darts/synthetic_data/debug/{i}.zarr', "w")
-            zarr_group['phase'] = batch[phase].data
-            zarr_group['mask'] = batch[mask].data
-            zarr_group['gt_affs'] = batch[gt_affs].data
-            zarr_group['affs_weights'] = batch[affs_weights].data
-            zarr_group['pred_affs'] = batch[pred_affs].data
-            zarr_group['gt_lsds'] = batch[gt_lsds].data
-            zarr_group['lsds_weights'] = batch[lsds_weights].data
-            zarr_group['pred_lsds'] = batch[pred_lsds].data
+            pipeline.request_batch(request)
             progress.set_description(f'Training iteration {i}') 
 
 
 if __name__ == '__main__':
-    train(5,5)
+    train(100000,64)
