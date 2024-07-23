@@ -58,7 +58,7 @@ def predict(checkpoint, phase_data, phase_file):
     print(aff_shape)
 
     # generating the zarr file for saving
-    zarrfile = zarr.open(target_dir + "/" + output_file, 'a')
+    zarrfile = zarr.open(data_zarr + "/" + phase_file, 'a')
 
    #zarrfile.create_dataset('phase', shape= total_input_roi.get_shape() / voxel_size)
     zarrfile.create_dataset('pred_lsds', shape = (6, lsd_shape[0], lsd_shape[1], lsd_shape[2]))
@@ -114,8 +114,8 @@ def predict(checkpoint, phase_data, phase_file):
 
     pipeline += gp.ZarrWrite(
         dataset_names = dataset_names,
-        output_dir = target_dir,
-        output_filename = output_file
+        output_dir = data_zarr,
+        output_filename = phase_file
     )
 
     pipeline += gp.Scan(scan_request)
@@ -194,11 +194,22 @@ def get_segmentation(zarr_path, threshold):
     zarr_root['fragments'] = fragments
     thresholds = [threshold]
 
+    ws_affs = np.stack([
+        np.zeros_like(affinities[0]),
+        affinities[0],
+        affinities[1]]
+    ).astype(np.float32)
+
+  
+
     segmentation = np.zeros(fragments.shape, dtype=np.uint64)
     for time in range(affinities.shape[1]):
         data = np.expand_dims(fragments[time], axis=0)
+        affs = np.expand_dims(ws_affs[:, time], axis=1)
+        print(affs.shape)
+        print(data.shape)
         generator = waterz.agglomerate(
-            affs=affinities.astype(np.float32),
+            affs=affs,
             fragments=data,
             thresholds=thresholds,
         )
@@ -220,12 +231,9 @@ if __name__ == "__main__":
     if "pred_affs" not in data_root:
         predict(checkpoint, data_zarr, phase_file)
 
-    threshold = 0.9
+    threshold = 0.5
 
-    # ws_affs = np.stack([
-    #     pred_affs[0],
-    #     pred_affs[1]]
-    # )
+   
 
     get_segmentation(data_zarr, threshold)
 
