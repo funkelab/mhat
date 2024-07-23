@@ -42,14 +42,12 @@ def predict(checkpoint, phase_data, phase_file):
         phase_data,
         {phase: phase_file},
         {phase: phase_array_specs}
-        )
+        ) + gp.Pad(size=(context, context))
     
     with gp.build(phase_source):
         total_input_roi = phase_source.spec[phase].roi
         #total_output_roi = phase_source.spec[phase].roi
         total_output_roi = phase_source.spec[phase].roi.grow(-context, -context)
-        # total_input_roi = [1:2, 0:36, 0:400]
-        # total_output_roi = [0:3, 0:36, 0:400]
 
     lsd_shape = total_output_roi.get_shape() / voxel_size
     aff_shape = total_output_roi.get_shape() / voxel_size
@@ -86,6 +84,8 @@ def predict(checkpoint, phase_data, phase_file):
     model.eval()
 
     pipeline = phase_source
+
+
 
     pipeline += gp.Normalize(phase)
 
@@ -232,8 +232,6 @@ if __name__ == "__main__":
         predict(checkpoint, data_zarr, phase_file)
 
     threshold = 0.5
-
-   
 
     get_segmentation(data_zarr, threshold)
 
