@@ -9,33 +9,28 @@ from scipy.ndimage.filters import maximum_filter
 from scipy.ndimage.morphology import distance_transform_edt
 from skimage.segmentation import watershed
 
-phase_data = "/nrs/funke/data/darts/synthetic_data/test1/17.zarr"
-phase_file = 'phase'
-checkpoint = "/groups/funke/home/sistaa/code/SyMBac/model_checkpoint_42000"
-
-# directory for predictions -- Phase Pred_LSDS Pred_AFFS
-target_dir = "/nrs/funke/data/darts/synthetic_data/test1"
-output_file = "17.zarr"
-
-zarrfile = zarr.open(phase_data + "/phase", "r")
-
-voxel_size = gp.Coordinate((1, 1, 1))
-size = gp.Coordinate((3, 400, 36))
-output_shape = gp.Coordinate((1, 400, 36))
-
-input_size = size*voxel_size
-output_size = output_shape*voxel_size
 
 def predict(checkpoint, phase_data, phase_file):
     phase = gp.ArrayKey("PHASE")
     pred_lsds = gp.ArrayKey('PRED_LSDS')
     pred_affs = gp.ArrayKey('PRED_AFFS')
 
+    zarrfile = zarr.open(phase_data + "/phase", "r")
+
+    voxel_size = gp.Coordinate((1, 1, 1))
+    size = gp.Coordinate((3, 400, 36))
+    output_shape = gp.Coordinate((1, 400, 36))
+
+    input_size = size*voxel_size
+    output_size = output_shape*voxel_size
+
     scan_request = gp.BatchRequest()
 
     scan_request.add(phase, input_size)
     scan_request.add(pred_lsds, output_size)
     scan_request.add(pred_affs, output_size)
+
+    context = (input_size - output_size) / 2
 
     phase_array_specs = gp.ArraySpec(
         voxel_size=voxel_size,
@@ -51,8 +46,8 @@ def predict(checkpoint, phase_data, phase_file):
     
     with gp.build(phase_source):
         total_input_roi = phase_source.spec[phase].roi
-        total_output_roi = phase_source.spec[phase].roi
-        #total_output_roi = phase_source.spec[phase].roi.grow(-context, -context)
+        #total_output_roi = phase_source.spec[phase].roi
+        total_output_roi = phase_source.spec[phase].roi.grow(-context, -context)
         # total_input_roi = [1:2, 0:36, 0:400]
         # total_output_roi = [0:3, 0:36, 0:400]
 
@@ -137,9 +132,8 @@ def predict(checkpoint, phase_data, phase_file):
     # print(
     #     f"\tphase: {batch[phase].data}, \tPred LSDS: {batch[pred_lsds].data}, \tPred Affs: {batch[pred_affs].data}")
     
-    return batch[phase].data, batch[pred_lsds].data, batch[pred_affs].data
+    # return batch[phase].data, batch[pred_lsds].data, batch[pred_affs].data
 
-phase, pred_lsds, pred_affs = predict(checkpoint, phase_data, phase_file)
 
 def watershed_from_boundary_distance(
         
@@ -174,53 +168,65 @@ def watershed_from_affinities(
         id_offset=0,
         min_seed_distance=3):
 
-    mean_affs = 0.5*(affs[1] + affs[2])
-
-    fragments = np.zeros(mean_affs.shape, dtype=np.uint64)
+    mean_affs = 0.5*(affs[0] + affs[1])
   
     boundary_mask = mean_affs>0.5*max_affinity_value
-    boundary_distances = distance_transform_edt(boundary_mask)
 
-    ret = watershed_from_boundary_distance(
-        boundary_distances,
-        boundary_mask,
-        id_offset=id_offset,
-        min_seed_distance=min_seed_distance)
+    fragments = np.zeros(mean_affs.shape, dtype=np.uint64)
+   
+    for time in range(0, affs.shape[1]):
+        boundary_distances = distance_transform_edt(boundary_mask[time])
 
-    return ret
+        frags, id_offset = watershed_from_boundary_distance(
+            boundary_distances,
+            boundary_mask[time],
+            id_offset=id_offset,
+            min_seed_distance=min_seed_distance)
+        fragments[time] = frags
+        
+    return fragments
 
-def get_segmentation(affinities, threshold):
+def get_segmentation(zarr_path, threshold):
+    zarr_root = zarr.open(zarr_path, 'a')
+    affinities = zarr_root["pred_affs"][:]
 
-    fragments = watershed_from_affinities(affinities)[0]
+    fragments = watershed_from_affinities(affinities)
+    zarr_root['fragments'] = fragments
     thresholds = [threshold]
 
-    generator = waterz.agglomerate(
-        affs=affinities.astype(np.float32),
-        fragments=fragments,
-        thresholds=thresholds,
-    )
+    segmentation = np.zeros(fragments.shape, dtype=np.uint64)
+    for time in range(affinities.shape[1]):
+        data = np.expand_dims(fragments[time], axis=0)
+        generator = waterz.agglomerate(
+            affs=affinities.astype(np.float32),
+            fragments=data,
+            thresholds=thresholds,
+        )
 
-    segmentation = next(generator)
+        seg = next(generator)
+        segmentation[time] = seg
+    
+    zarr_root['pred_mask'] = segmentation
+    zarr_root['pred_mask'].attrs['resolution'] = (1, 1, 1)
 
-    return segmentation, fragments
 
-# TODO: use all 3 dimensions (change line 219)
-ws_affs = np.stack([
-    np.zeros_like(pred_affs[0]),
-    pred_affs[0],
-    pred_affs[1]]
-)
+if __name__ == "__main__":
 
-threshold = 0.9
+    data_zarr = "/nrs/funke/data/darts/synthetic_data/test1/18.zarr"
+    phase_file = 'phase'
+    checkpoint = "/groups/funke/home/sistaa/code/SyMBac/model_checkpoint_100000"
 
-pred_mask, fragments = get_segmentation(ws_affs, threshold)
+    data_root = zarr.open(data_zarr)
+    if "pred_affs" not in data_root:
+        predict(checkpoint, data_zarr, phase_file)
 
-zarr_file = zarr.open(phase_data, 'a')
+    threshold = 0.9
 
-zarr_file['pred_mask'] = pred_mask
-zarr_file['fragments'] = fragments
+    # ws_affs = np.stack([
+    #     pred_affs[0],
+    #     pred_affs[1]]
+    # )
 
-# TODO: make voxel size a tuple
-zarr_file['pred_mask'].attrs['resolution'] = (1, 1, 1)
+    get_segmentation(data_zarr, threshold)
 
-#zarr_file['segmentation'].attrs['offset'] = offset
+    #zarr_file['segmentation'].attrs['offset'] = offset
