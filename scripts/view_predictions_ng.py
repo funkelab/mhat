@@ -27,6 +27,7 @@ def visualize_lsds(
     viewer_context,
     data,
     name,
+    voxel_offset=None
 ):
     shader = rgb_shader_code % (1.0, 0, 1, 2)
     channels_dim = 0
@@ -42,7 +43,7 @@ def visualize_lsds(
                 scales=[1, 1, 1, 1],
             ),
             volume_type="image",
-        # voxel_offset = [0, 0, 1, 0, 0]
+        voxel_offset = voxel_offset,
         )
         viewer_context.layers[name + f"_{i}-{end_channel}"] = ng.ImageLayer(
             source=layer,
@@ -54,6 +55,7 @@ def visualize_image(
     viewer_context,
     data,
     name,
+    voxel_offset=None,
 ):
     layer = ng.LocalVolume(
         data=data,
@@ -63,6 +65,7 @@ def visualize_image(
             scales=[1, 1, 1],
         ),
         volume_type="image",
+        voxel_offset = voxel_offset,
     )
     # compute shader normalization ranges from one time point
     target_time = data.shape[0] // 2
@@ -78,6 +81,7 @@ def visualize_segmentation(
     viewer_context,
     data,
     name,
+    voxel_offset=None,
 ):
     data = data.astype(np.uint64)
     layer = ng.LocalVolume(
@@ -88,7 +92,7 @@ def visualize_segmentation(
             scales=[1, 1, 1],
         ),
         volume_type="segmentation",
-        # voxel_offset = [0, 1, 0, 0]
+        voxel_offset = voxel_offset
     )
     
     viewer_context.layers.append(name=name, layer=layer)
@@ -109,12 +113,12 @@ if __name__ == "__main__":
         print(group)
         data = root[group]
         print(data.shape)
-        if group in ["mask", "pred_mask", "fragments"]:
+        if group in ["mask", "pred_mask", "fragments", "segmentation"]:
             with viewer.txn() as s:
                 visualize_segmentation(
                     s,
                     data,
-                    group
+                    group,
                 )
         elif group in ["gt_affs", "affs_weights", "pred_affs"] :
             affs_y = data[0]

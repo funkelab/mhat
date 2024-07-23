@@ -1,4 +1,5 @@
 import gunpowder as gp
+from pathlib import Path
 import zarr
 import numpy as np
 from darts_utils.segmentation import MtlsdModel
@@ -10,12 +11,10 @@ from scipy.ndimage.morphology import distance_transform_edt
 from skimage.segmentation import watershed
 
 
-def predict(checkpoint, phase_data, phase_file):
+def predict(checkpoint, data_zarr, phase_group):
     phase = gp.ArrayKey("PHASE")
     pred_lsds = gp.ArrayKey('PRED_LSDS')
     pred_affs = gp.ArrayKey('PRED_AFFS')
-
-    zarrfile = zarr.open(phase_data + "/phase", "r")
 
     voxel_size = gp.Coordinate((1, 1, 1))
     size = gp.Coordinate((3, 400, 36))
@@ -39,10 +38,10 @@ def predict(checkpoint, phase_data, phase_file):
         )
 
     phase_source = gp.ZarrSource(
-        phase_data,
-        {phase: phase_file},
+        data_zarr,
+        {phase: phase_group},
         {phase: phase_array_specs}
-        ) + gp.Pad(size=(context, context))
+        ) + gp.Pad(key=phase, size=context)
     
     with gp.build(phase_source):
         total_input_roi = phase_source.spec[phase].roi
@@ -56,7 +55,7 @@ def predict(checkpoint, phase_data, phase_file):
     print(aff_shape)
 
     # generating the zarr file for saving
-    zarrfile = zarr.open(data_zarr + "/" + phase_file, 'a')
+    zarrfile = zarr.open(data_zarr, 'a')
 
    #zarrfile.create_dataset('phase', shape= total_input_roi.get_shape() / voxel_size)
     zarrfile.create_dataset('pred_lsds', shape = (6, lsd_shape[0], lsd_shape[1], lsd_shape[2]))
@@ -111,11 +110,12 @@ def predict(checkpoint, phase_data, phase_file):
         pred_lsds: 'pred_lsds',
         pred_affs: 'pred_affs',
     }
+    print(data_zarr.parent, data_zarr.name)
 
     pipeline += gp.ZarrWrite(
         dataset_names = dataset_names,
-        output_dir = data_zarr,
-        output_filename = phase_file
+        output_dir = data_zarr.parent,
+        output_filename = data_zarr.name
     )
 
     pipeline += gp.Scan(scan_request)
@@ -223,7 +223,7 @@ def get_segmentation(zarr_path, threshold):
 
 if __name__ == "__main__":
 
-    data_zarr = "/nrs/funke/data/darts/synthetic_data/test1/18.zarr"
+    data_zarr = Path("/nrs/funke/data/darts/synthetic_data/test1/19.zarr")
     phase_file = 'phase'
     checkpoint = "/groups/funke/home/sistaa/code/SyMBac/model_checkpoint_100000"
 
