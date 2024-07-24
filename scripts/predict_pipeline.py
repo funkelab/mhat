@@ -200,26 +200,26 @@ def get_segmentation(zarr_path, threshold):
         affinities[1]]
     ).astype(np.float32)
 
-  
 
-    segmentation = np.zeros(fragments.shape, dtype=np.uint64)
-    for time in range(affinities.shape[1]):
-        data = np.expand_dims(fragments[time], axis=0)
-        affs = np.expand_dims(ws_affs[:, time], axis=1)
-        print(affs.shape)
-        print(data.shape)
-        generator = waterz.agglomerate(
-            affs=affs,
-            fragments=data,
-            thresholds=thresholds,
-        )
+    generator = waterz.agglomerate(
+        affs=ws_affs,
+        fragments=fragments,
+        thresholds=thresholds,
+        return_merge_history=True,
+    )
 
-        seg = next(generator)
-        segmentation[time] = seg
+    segmentation, merge_history = next(generator)
     
     zarr_root['pred_mask'] = segmentation
     zarr_root['pred_mask'].attrs['resolution'] = (1, 1, 1)
+    fields = ["a", "b", "c", "score"]
 
+    with open (outfile, 'w') as f:
+        writer = csv.DictWriter(f, fieldnames=fields)
+        writer.writeheader()
+        for row in merge_history:
+            writer.writerow(row)
+    
 
 if __name__ == "__main__":
 
@@ -235,4 +235,3 @@ if __name__ == "__main__":
 
     get_segmentation(data_zarr, threshold)
 
-    #zarr_file['segmentation'].attrs['offset'] = offset
