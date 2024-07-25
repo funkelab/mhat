@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 import neuroglancer as ng
 import neuroglancer.cli as ngcli
+from darts_utils.segmentation import compute_segmentation
 
 import zarr
 import numpy as np
@@ -102,13 +103,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("path_to_zarr",)
     parser.add_argument("-g", "--groups", nargs="+")
+    parser.add_argument("-t", "--threshold", type=float, default=None)
     ngcli.add_server_arguments(parser)
     args = parser.parse_args()
     ng.set_server_bind_address(bind_address="0.0.0.0")
     base_path = Path(args.path_to_zarr)
+    threshold = args.threshold
 
     viewer = ng.Viewer()
     root = zarr.open(base_path)
+        
     for group in args.groups:
         print(group)
         data = root[group]
@@ -151,6 +155,17 @@ if __name__ == "__main__":
                 )
         else:
             raise ValueError(f"Couldn't visualize group {group}")
+    
+    if args.threshold is not None:
+        fragments = root["fragments"][:]
+        merge_history = Path(base_path).parent / "merge_history.csv"
+        segmentation = compute_segmentation(fragments, merge_history, threshold)
+        with viewer.txn() as s:
+            visualize_segmentation(
+                s,
+                segmentation,
+                f"threshold_{threshold}",
+            )
     url = str(viewer)
     print(url)
     input()
