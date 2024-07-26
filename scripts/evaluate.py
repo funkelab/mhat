@@ -75,15 +75,15 @@ def evaluate_masks(zarr_path, gt_masks: np.ndarray, pred_masks: np.ndarray, iou_
             "f1_score": f1_score
         })
 
-    return results
+    outfile = (zarr_path.parent / "new_evaluation.csv")
+    fields = ["time_frame", "true_positives", "false_positives", "false_negatives", "precision", "recall", "f1_score"]
+    with open (outfile, 'w') as f:
+        writer = csv.DictWriter(f, fieldnames=fields)
+        writer.writeheader()
+        for row in results:
+            writer.writerow(row)
 
-    # outfile = (zarr_path.parent / "evaluation.csv")
-    # fields = ["time_frame", "true_positives", "false_positives", "false_negatives", "precision", "recall", "f1_score"]
-    # with open (outfile, 'w') as f:
-    #     writer = csv.DictWriter(f, fieldnames=fields)
-    #     writer.writeheader()
-    #     for row in results:
-    #         writer.writerow(row)
+    return results
 
 if __name__ == "__main__":
 
@@ -110,4 +110,3 @@ if __name__ == "__main__":
         plt.savefig(save)
         plt.close()
 
-# %%
