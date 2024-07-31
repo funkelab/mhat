@@ -88,11 +88,11 @@ def evaluate_masks(zarr_path, gt_masks: np.ndarray, pred_masks: np.ndarray, iou_
 if __name__ == "__main__":
 
 
-    for file_num in range(1, 16):
+    for file_num in range(1, 101):
         zarr_dir = Path(f"/nrs/funke/data/darts/synthetic_data/test1/{file_num}/data.zarr")
         root = zarr.open(zarr_dir, "a")
         gt_mask = root["mask"][:]
-        pred_mask = root["pred_mask"][:]
+        pred_mask = root["pred_mask_0.15"][:]
 
         results = evaluate_masks(zarr_dir, gt_mask, pred_mask)
 
@@ -100,13 +100,13 @@ if __name__ == "__main__":
         f1 = [result["f1_score"] for result in results]
         time = [result["time_frame"] for result in results]
 
-        plt.figure(figsize=(10,6))
-        plt.hist(f1)
-        plt.title(f"F1 Plot of Video {file_num}")
-        plt.xlabel("F1 Score")
-        plt.ylabel("Frequency")
+        # plt.figure(figsize=(10,6))
+        # plt.hist(f1)
+        # plt.title(f"F1 Plot of Video {file_num}")
+        # plt.xlabel("F1 Score")
+        # plt.ylabel("Frequency")
 
-        save = (zarr_dir.parent / f"f1_histogram_plt_{file_num}.png")
-        plt.savefig(save)
-        plt.close()
+        # save = (zarr_dir.parent / f"f1_histogram_plt_{file_num}.png")
+        # plt.savefig(save)
+        # plt.close()
 
