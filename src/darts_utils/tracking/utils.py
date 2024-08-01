@@ -152,7 +152,7 @@ def relabel_segmentation(
         soln_copy.remove_edges_from(out_edges)
     for node_set in nx.weakly_connected_components(soln_copy):
         for node in node_set:
-            time_frame = solution_nx_graph.nodes[node]["time"].attr
+            time_frame = solution_nx_graph.nodes[node]["time"]
             previous_seg_id = node
             previous_seg_mask = segmentation[time_frame] == previous_seg_id
             tracked_masks[time_frame][previous_seg_mask] = id_counter
@@ -164,3 +164,16 @@ def add_appear_ignore_attr(cand_graph):
         if attrs.get('time') == 0:
             cand_graph.nodes[node_id]["ignore_appear"] = True
 
+def add_disappear(cand_graph):
+    for node_id, attrs in cand_graph.nodes(data=True):
+        if attrs.get('time') == 99 or attrs.get('pos')[0] > 380:
+            cand_graph.nodes[node_id]["ignore_disappear"] = True
+
+def add_drift_dist_attr(cand_graph):
+    for edge in cand_graph.edges():
+        drift = 10
+        u, v = edge
+        pos_u = drift + cand_graph.nodes[u]["pos"][0]
+        pos_v = cand_graph.nodes[v]["pos"][0]
+        drift_dist = np.abs(pos_u - pos_v)
+        cand_graph.edges[edge]["drift_dist"] = drift_dist

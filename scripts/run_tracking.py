@@ -45,6 +45,8 @@ if __name__ == "__main__":
     cand_graph = utils.nodes_from_segmentation(seg)
     utils.add_cand_edges(cand_graph, max_edge_distance)
     utils.add_appear_ignore_attr(cand_graph)
+    utils.add_drift_dist_attr(cand_graph)
+    utils.add_disappear(cand_graph)
 
     solution_graph = solve_with_motile(cand_graph)
     print("Solution")
