@@ -28,9 +28,9 @@ def save_solution(solution_graph, csv_path):
 
 
 if __name__ == "__main__":
-    vid_num = 2
+    vid_num = 5
 
-    base_path = Path(f"/Volumes/funke/data/darts/synthetic_data/test1/{vid_num}")
+    base_path = Path(f"/nrs/funke/data/darts/synthetic_data/test1/{vid_num}")
     zarr_path = base_path / "data.zarr"
     gt_csv_path = base_path / "gt_tracks.csv"
     output_csv_path = base_path / "pred_tracks.csv"
@@ -44,6 +44,7 @@ if __name__ == "__main__":
     gt_tracks = utils.read_gt_tracks(zarr_path, gt_csv_path)
     cand_graph = utils.nodes_from_segmentation(seg)
     utils.add_cand_edges(cand_graph, max_edge_distance)
+    utils.add_appear_ignore_attr(cand_graph)
 
     solution_graph = solve_with_motile(cand_graph)
     print("Solution")
@@ -52,6 +53,9 @@ if __name__ == "__main__":
     )
     print(
         f"Our solution graph has {solution_graph.number_of_nodes()} nodes and {solution_graph.number_of_edges()} edges"
+    )
+    print(
+        f"Candidate graph has {cand_graph.number_of_nodes()} nodes and {cand_graph.number_of_edges()} edges"
     )
 
     save_solution(solution_graph, output_csv_path)
