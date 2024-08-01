@@ -19,8 +19,8 @@ def save_solution(solution_graph, csv_path):
                 raise ValueError(f"Node {node} has too many parents! {parents}")
             row = {
                 "time": data["time"],
-                "x": data["pos"][0],
-                "y": data["pos"][1],
+                "x": data["x"],
+                "y": data["y"],
                 "id": node,
                 "parent_id": parent_id,
             }

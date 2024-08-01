@@ -25,7 +25,8 @@ def load_prediction(csv_path):
             node_id = int(float(row["id"]))
             attrs = {
                 "time": int(float(row["time"])),
-                "pos": [int(float(row["x"])), int(float(row["y"]))],
+                "x": int(float(row["x"])),
+                "y": int(float(row["y"])),
             }
             parent_id = int(float(row["parent_id"]))
             graph.add_node(node_id, **attrs)
