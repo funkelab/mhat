@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from csv import DictReader
 from typing import Any, Iterable
 
@@ -26,7 +27,12 @@ def nodes_from_segmentation(segmentation: np.ndarray) -> nx.DiGraph:
         props = skimage.measure.regionprops(seg_frame)
         for regionprop in props:
             node_id = int(regionprop.label)
-            attrs = {"time": t, "x": float(regionprop.centroid[0]), "y": float(regionprop.centroid[1]), "label": node_id}
+            attrs = {
+                "time": t,
+                "x": float(regionprop.centroid[0]),
+                "y": float(regionprop.centroid[1]),
+                "label": node_id,
+            }
             cand_graph.add_node(node_id, **attrs)
 
     return cand_graph
@@ -82,8 +88,7 @@ def create_kdtree(
     cand_graph: nx.DiGraph, node_ids: Iterable[Any]
 ) -> scipy.spatial.KDTree:
     positions = [
-        [cand_graph.nodes[node]["x"], cand_graph.nodes[node]["y"]] 
-        for node in node_ids
+        [cand_graph.nodes[node]["x"], cand_graph.nodes[node]["y"]] for node in node_ids
     ]
     return scipy.spatial.KDTree(positions)
 
@@ -162,15 +167,18 @@ def relabel_segmentation(
         id_counter += 1
     return tracked_masks
 
+
 def add_appear_ignore_attr(cand_graph):
     for node_id, attrs in cand_graph.nodes(data=True):
-        if attrs.get('time') == 0:
+        if attrs.get("time") == 0:
             cand_graph.nodes[node_id]["ignore_appear"] = True
+
 
 def add_disappear(cand_graph):
     for node_id, attrs in cand_graph.nodes(data=True):
-        if attrs.get('time') == 99 or attrs.get('x') > 380:
+        if attrs.get("time") == 99 or attrs.get("x") > 380:
             cand_graph.nodes[node_id]["ignore_disappear"] = True
+
 
 def add_drift_dist_attr(cand_graph):
     for edge in cand_graph.edges():
@@ -180,3 +188,20 @@ def add_drift_dist_attr(cand_graph):
         pos_v = cand_graph.nodes[v]["x"]
         drift_dist = np.abs(pos_u - pos_v)
         cand_graph.edges[edge]["drift_dist"] = drift_dist
+
+
+def load_prediction(csv_path):
+    with open(csv_path) as f:
+        reader = DictReader(f)
+        graph = nx.DiGraph()
+        for row in reader:
+            node_id = int(float(row["id"]))
+            attrs = {
+                "time": int(float(row["time"])),
+                "pos": [int(float(row["x"])), int(float(row["y"]))],
+            }
+            parent_id = int(float(row["parent_id"]))
+            graph.add_node(node_id, **attrs)
+            if parent_id != -1:
+                graph.add_edge(parent_id, node_id)
+    return graph

@@ -22,10 +22,12 @@ dependencies = [
   "zarr",
   "scikit-image",
   "gitpython",
-  "pytorch",
-  "pytorch-cuda=11.8",
+  # "pytorch",
+  # "pytorch-cuda==11.8",
   "lsds",
-  "funlib.learn.torch",
+  # "funlib.learn.torch",
+  "traccuracy",
+  "motile-plugin @ git+https://github.com/funkelab/motile_napari_plugin@fe5bed08f4e089b38f6e50d431439b826a7a5e9b"
 ]
 
 [project.optional-dependencies]
