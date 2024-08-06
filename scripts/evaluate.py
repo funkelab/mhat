@@ -45,7 +45,7 @@ def _compute_ious(
         ious.append((id1, id2, intersection / union))
     return ious
 
-def evaluate_masks(zarr_path, gt_masks: np.ndarray, pred_masks: np.ndarray, iou_threshold: float = 0.5) -> list[dict]:
+def evaluate_masks(csv_filepath, gt_masks: np.ndarray, pred_masks: np.ndarray, iou_threshold: float = 0.5) -> list[dict]:
     results = []
     for t in range(gt_masks.shape[0]):
         ious = _compute_ious(gt_masks[t], pred_masks[t])
@@ -75,7 +75,7 @@ def evaluate_masks(zarr_path, gt_masks: np.ndarray, pred_masks: np.ndarray, iou_
             "f1_score": f1_score
         })
 
-    outfile = (zarr_path.parent / "new_evaluation.csv")
+    outfile = csv_filepath
     fields = ["time_frame", "true_positives", "false_positives", "false_negatives", "precision", "recall", "f1_score"]
     with open (outfile, 'w') as f:
         writer = csv.DictWriter(f, fieldnames=fields)
@@ -93,8 +93,9 @@ if __name__ == "__main__":
         root = zarr.open(zarr_dir, "a")
         gt_mask = root["mask"][:]
         pred_mask = root["pred_mask_0.15"][:]
+        csv_fp = zarr_dir.parent / 'new_evaluation.csv'
 
-        results = evaluate_masks(zarr_dir, gt_mask, pred_mask)
+        results = evaluate_masks(zarr_dir, csv_fp, gt_mask, pred_mask)
 
     
         f1 = [result["f1_score"] for result in results]

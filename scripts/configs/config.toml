@@ -1,0 +1,9 @@
+
+edge_selection_weight = 1.0
+edge_selection_constant = -30.0
+cohesion_weight = -2
+cohesion_constant = 5
+adhesion_weight = -2
+adhesion_constant = 5
+appear_constant = 100.0
+disappear_constant = 500.0
