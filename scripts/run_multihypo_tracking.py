@@ -114,9 +114,10 @@ if __name__ == "__main__":
         utils.add_cand_edges(cand_graph, max_edge_distance)
         utils.add_appear_ignore_attr(cand_graph)
         utils.add_disappear(cand_graph)
-        utils.add_drift_dist_attr(cand_graph)
+        track_graph = motile.TrackGraph(cand_graph, frame_attribute="time")
+        utils.add_drift_dist_attr(track_graph)
 
-        solution_graph = solve_with_motile(config, cand_graph, exclusion_sets)
+        solution_graph = solve_with_motile(config, track_graph, exclusion_sets)
         # print(
         #     f"Our gt graph has {gt_tracks.number_of_nodes()} nodes and {gt_tracks.number_of_edges()} edges"
         # )

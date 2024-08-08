@@ -3,7 +3,6 @@ from motile_toolbox.candidate_graph import graph_to_nx
 
 
 def solve_with_motile(config, graph, exclusion_sets):
-    print(config)
     """Set up and solve the network flow problem.
 
     Args:
@@ -12,8 +11,7 @@ def solve_with_motile(config, graph, exclusion_sets):
     Returns:
         nx.DiGraph: The networkx digraph with the selected solution tracks
     """
-    cand_trackgraph = motile.TrackGraph(graph, frame_attribute="time")
-    solver = motile.Solver(cand_trackgraph)
+    solver = motile.Solver(graph)
 
     solver.add_cost(motile.costs.EdgeSelection(
         weight= config["edge_selection_weight"], 
