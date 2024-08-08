@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from csv import DictReader
 from typing import Any, Iterable
-
+from motile.costs import Cost, Weight
+from motile.variables import EdgeSelected
+from itertools import combinations
 import networkx as nx
 import numpy as np
 import scipy
@@ -32,6 +34,7 @@ def nodes_from_segmentation(segmentation: np.ndarray) -> nx.DiGraph:
                 "x": float(regionprop.centroid[0]),
                 "y": float(regionprop.centroid[1]),
                 "label": node_id,
+                "area": regionprop.area
             }
             cand_graph.add_node(node_id, **attrs)
 
@@ -205,3 +208,55 @@ def load_prediction(csv_path):
             if parent_id != -1:
                 graph.add_edge(parent_id, node_id)
     return graph
+
+def add_hyper_elements(candidate_graph):
+    nodes_original = list(candidate_graph.nodes)
+    for node in nodes_original:
+        out_edges = candidate_graph.out_edges(node)
+        pairs = list(combinations(out_edges, 2))
+        for pair in pairs:
+            candidate_graph.add_node(
+                str(pair[0][0]) + "_" + str(pair[0][1]) + "_" + str(pair[1][1])
+            )
+            candidate_graph.add_edge(
+                pair[0][0],
+                str(pair[0][0] + "_" + str(pair[0][1]) + "_" + str(pair[1][1])),
+            )
+            candidate_graph.add_edge(
+                str(pair[0][0]) + "_" + str(pair[0][1]) + "_" + str(pair[1][1]),
+                pair[0][1],
+            )
+            candidate_graph.add_edge(
+                str(pair[0][0]) + "_" + str(pair[0][1]) + "_" + str(pair[1][1]),
+                pair[1][1],
+            )
+    return candidate_graph
+
+class HyperAreaSplit(Cost):
+    def __init__(self, weight, area_attribute, constant):
+        self.weight = Weight(weight)
+        self.constant = Weight(constant)
+        self.area_attribute = area_attribute
+
+    def apply(self, solver):
+        edge_variables = solver.get_variables(EdgeSelected)
+        for key, index in edge_variables.items():
+            if type(key[1]) is tuple:
+                (start,) = key[0]
+                end1, end2 = key[1]
+                area_start = self.__get_node_area(solver.graph, start)
+                area_end1 = self.__get_node_area(solver.graph, end1)
+                area_end2 = self.__get_node_area(solver.graph, end2)
+                feature = np.linalg.norm(area_start - (area_end1 + area_end2))
+                solver.add_variable_cost(index, feature, self.weight)
+                solver.add_variable_cost(index, 1.0, self.constant)
+            else:
+                solver.add_variable_cost(index, 0.0, self.weight)
+                solver.add_variable_cost(index, 0.0, self.constant)
+
+    
+    def __get_node_area(self, graph: nx.DiGraph, node: int) -> np.ndarray:
+        if isinstance(self.area_attribute, tuple):
+            return np.array([graph.nodes[node][p] for p in self.area_attribute])
+        else:
+            return np.array(graph.nodes[node][self.area_attribute])
