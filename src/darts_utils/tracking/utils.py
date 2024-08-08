@@ -10,6 +10,7 @@ import numpy as np
 import scipy
 import skimage
 import zarr
+import motile
 
 
 def nodes_from_segmentation(segmentation: np.ndarray) -> nx.DiGraph:
@@ -183,14 +184,24 @@ def add_disappear(cand_graph):
             cand_graph.nodes[node_id]["ignore_disappear"] = True
 
 
-def add_drift_dist_attr(cand_graph):
+def add_drift_dist_attr(cand_graph: motile.TrackGraph):
+
+    drift = 10
     for edge in cand_graph.edges():
-        drift = 10
-        u, v = edge
-        pos_u = drift + cand_graph.nodes[u]["x"]
-        pos_v = cand_graph.nodes[v]["x"]
-        drift_dist = np.abs(pos_u - pos_v)
-        cand_graph.edges[edge]["drift_dist"] = drift_dist
+        if cand_graph.is_hyperedge(edge):
+            us, vs = edge
+            u = us[0]  # assume always one "source" node
+            v1, v2 = vs  # assume always two "target" nodes
+            pos_u = drift + cand_graph.nodes[u]["x"]
+            mean_pos_v = np.mean(cand_graph.nodes[v1]["x"], cand_graph.nodes[v2]["x"])
+            drift_dist = np.abs(pos_u - mean_pos_v)
+            cand_graph.edges[edge]["drift_dist"] = drift_dist
+        else:
+            u, v = edge
+            pos_u = drift + cand_graph.nodes[u]["x"]
+            pos_v = cand_graph.nodes[v]["x"]
+            drift_dist = np.abs(pos_u - pos_v)
+            cand_graph.edges[edge]["drift_dist"] = drift_dist
 
 
 def load_prediction(csv_path):
