@@ -69,11 +69,11 @@ def load_prediction(csv_path):
 
 if __name__ in "__main__":
 
-    dt = '2024-08-06_13-48-48'
+    dt = '2024-08-09_15-40-36'
 
-    for vid_num in range(1,11):
-        base_path = Path(f"/nrs/funke/data/darts/synthetic_data/validation1/{vid_num}")
-        dt_path = Path(f"/nrs/funke/data/darts/synthetic_data/validation1/{vid_num}/{dt}")
+    for vid_num in range(1,101):
+        base_path = Path(f"/nrs/funke/data/darts/synthetic_data/test1/{vid_num}")
+        dt_path = Path(f"/nrs/funke/data/darts/synthetic_data/test1/{vid_num}/{dt}")
         zarr_path = base_path / "data.zarr"
         gt_csv_path = base_path / "gt_tracks.csv"
         output_csv_path = dt_path / f"multihypo_pred_tracks.csv"

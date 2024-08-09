@@ -21,13 +21,13 @@ def solve_with_motile(config, graph, exclusion_sets):
     ))
 
     solver.add_constraint(motile.constraints.MaxParents(1))
-    solver.add_constraint(motile.constraints.MaxChildren(1))
+    solver.add_constraint(motile.constraints.MaxChildren(2))
 
-    solver.add_cost(utils.HyperAreaSplit(
-        weight=config["hyper_weight"],
-        constant=config["hyper_constant"],
-        area_attribute= "area"
-    ))
+    # solver.add_cost(utils.HyperAreaSplit(
+    #     weight=config["hyper_weight"],
+    #     constant=config["hyper_constant"],
+    #     area_attribute= "area"
+    # ))
 
     solver.add_cost(motile.costs.NodeSelection(
         weight=config["cohesion_weight"], 

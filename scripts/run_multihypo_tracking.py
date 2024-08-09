@@ -78,11 +78,11 @@ if __name__ == "__main__":
     current_datetime = datetime.datetime.now()
     datetime_str = current_datetime.strftime('%Y-%m-%d_%H-%M-%S')
 
-    for vid_num in range(1, 3):
+    for vid_num in range(1, 101):
 
-        base_path = Path(f"/nrs/funke/data/darts/synthetic_data/validation1/{vid_num}")
-        make_path = os.mkdir(f"/nrs/funke/data/darts/synthetic_data/validation1/{vid_num}/{datetime_str}")
-        dt_base_path = Path(f"/nrs/funke/data/darts/synthetic_data/validation1/{vid_num}/{datetime_str}")
+        base_path = Path(f"/nrs/funke/data/darts/synthetic_data/test1/{vid_num}")
+        make_path = os.mkdir(f"/nrs/funke/data/darts/synthetic_data/test1/{vid_num}/{datetime_str}")
+        dt_base_path = Path(f"/nrs/funke/data/darts/synthetic_data/test1/{vid_num}/{datetime_str}")
         zarr_path = base_path / "data.zarr"
         gt_csv_path = base_path / "gt_tracks.csv"
         merge_history_csv_path = base_path / "merge_history.csv"
@@ -110,7 +110,7 @@ if __name__ == "__main__":
         cand_graph, exclusion_sets = create_multihypo_graph.get_nodes(
             fragments, merge_history, min_score=0.1, max_score=0.3
             )
-        cand_graph = utils.add_hyper_elements(cand_graph)
+       # cand_graph = utils.add_hyper_elements(cand_graph)
 
         utils.add_cand_edges(cand_graph, max_edge_distance)
         utils.add_appear_ignore_attr(cand_graph)
