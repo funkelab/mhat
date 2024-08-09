@@ -136,12 +136,14 @@ if __name__ == "__main__":
     parser.add_argument("zarrpath")
     args = parser.parse_args()
 
+    dt = "2024-08-08_15-35-31"
+
     zarr_path = Path(args.zarrpath)
     zarr_root = zarr.open(zarr_path, "r")
 
     lineage_csv_path = zarr_path.parent / ("gt_tracks.csv")
 
-    prediction_csv_path = zarr_path.parent / ("pred_tracks.csv")
+    prediction_csv_path = zarr_path.parent / (f"{dt}") / ("multihypo_pred_tracks.csv")
 
     # Initialize Napari viewer
     viewer = napari.Viewer()
@@ -151,12 +153,12 @@ if __name__ == "__main__":
     mask_data = zarr_root["mask"][:]
     viewer.add_labels(mask_data, name="gt_mask")
 
-    pred_mask_data = zarr_root["pred_mask_0.15"][:]
+    pred_mask_data = zarr_root[f"{dt}_multihypo_pred_mask"][:]
     # viewer.add_labels(mask_data, name="pred_mask")
 
     lineage = utils.read_gt_tracks(zarr_path, lineage_csv_path)
 
-    track_data, track_props, track_edges = to_napari_tracks_layer(lineage)
+    track_data, track_props, track_edges = to_napari_tracks_layer(lineage, location_key=("x", "y"))
     tracks_layer = napari.layers.Tracks(
         track_data,
         properties=track_props,
@@ -170,7 +172,7 @@ if __name__ == "__main__":
     pred_mask_relabeled = utils.relabel_segmentation(pred_lineage, pred_mask_data)
     viewer.add_labels(pred_mask_relabeled, name="pred_seg")
 
-    track_data, track_props, track_edges = to_napari_tracks_layer(pred_lineage)
+    track_data, track_props, track_edges = to_napari_tracks_layer(pred_lineage, location_key=("x", "y"))
     tracks_layer = napari.layers.Tracks(
         track_data,
         properties=track_props,
