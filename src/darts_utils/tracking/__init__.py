@@ -1,1 +1,1 @@
-from .solve_with_motile import solve_with_motile  #noqa
+from .solve_with_motile import solve_with_motile  # noqa

@@ -100,6 +100,7 @@ def run_tracking(config, video_base_path: Path):
         merge_history,
         min_score=config["min_merge_score"],
         max_score=config["max_merge_score"],
+        size_threshold=config["size_threshold"],
     )
 
     utils.add_cand_edges(cand_graph, max_edge_distance)

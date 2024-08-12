@@ -13,3 +13,5 @@ disappear_constant = 200.0
 min_merge_score = 0.0
 max_merge_score = 0.5
 max_edge_distance = 30
+
+size_threshold = 50

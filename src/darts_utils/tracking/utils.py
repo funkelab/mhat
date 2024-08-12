@@ -14,12 +14,17 @@ from motile.costs import Cost, Weight
 from motile.variables import EdgeSelected
 
 
-def nodes_from_segmentation(segmentation: np.ndarray) -> nx.DiGraph:
+def nodes_from_segmentation(
+    segmentation: np.ndarray, size_threshold: int | None = None
+) -> nx.DiGraph:
     """Extract candidate nodes from a segmentation.
 
     Args:
         segmentation (np.ndarray): A numpy array with integer labels and dimensions
             (t, y, x).
+
+        size_threshold (int): A minimum area for candidate nodes. Nodes smaller
+            than this area will not be added to the graph.
 
     Returns:
         nx.DiGraph: A candidate graph with only nodes.
@@ -29,6 +34,8 @@ def nodes_from_segmentation(segmentation: np.ndarray) -> nx.DiGraph:
         seg_frame = segmentation[t]
         props = skimage.measure.regionprops(seg_frame)
         for regionprop in props:
+            if size_threshold and regionprop.area < size_threshold:
+                continue
             node_id = int(regionprop.label)
             attrs = {
                 "time": t,

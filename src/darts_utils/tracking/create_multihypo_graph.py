@@ -1,9 +1,11 @@
+import csv
 from pathlib import Path
+
 import networkx as nx
 import numpy as np
-from typing import List
+
 from .utils import nodes_from_segmentation
-import csv
+
 
 def load_merge_history(merge_path: Path) -> np.ndarray:
     """_summary_
@@ -27,8 +29,8 @@ def load_merge_history(merge_path: Path) -> np.ndarray:
     merge_history = np.array(merge_history)
     return merge_history
 
-def renumber_merge_history(merge_history: np.ndarray, max_node_id: int) -> np.ndarray:
 
+def renumber_merge_history(merge_history: np.ndarray, max_node_id: int) -> np.ndarray:
     # renumber all the merges to be new ids
     for idx in range(merge_history.shape[0]):
         max_node_id += 1
@@ -37,7 +39,7 @@ def renumber_merge_history(merge_history: np.ndarray, max_node_id: int) -> np.nd
         merge_history[idx][2] = max_node_id
         # replace all instances of c after this row and later with new node id
         if idx < merge_history.shape[0]:
-            merge_history[idx + 1:][merge_history[idx + 1:] == c] = max_node_id
+            merge_history[idx + 1 :][merge_history[idx + 1 :] == c] = max_node_id
 
     return merge_history
 
@@ -45,8 +47,9 @@ def renumber_merge_history(merge_history: np.ndarray, max_node_id: int) -> np.nd
 def get_nodes(
     fragments: np.ndarray,
     merge_history: np.ndarray,
-    min_score:float = 0.0,
-    max_score:float = 0.5
+    min_score: float = 0.0,
+    max_score: float = 0.5,
+    size_threshold: int | None = None,
 ) -> tuple[nx.DiGraph, list[tuple, ...]]:
     """_summary_
 
@@ -65,11 +68,11 @@ def get_nodes(
     last_scores = {}
     # create a dictionary from node_ids to next merge scores used to merge the node
     next_scores = {}
-    
+
     fragments = fragments.copy()
 
-    graph : nx.DiGraph | None = None
-    conflict_sets = {} # map from parent node to conflict sets with that node
+    graph: nx.DiGraph | None = None
+    conflict_sets = {}  # map from parent node to conflict sets with that node
 
     for index, merge in enumerate(merge_history):
         a, b, c, score = merge
@@ -79,7 +82,7 @@ def get_nodes(
 
         if score >= min_score and graph is None:
             # get the initial fragments we want to populate the cand graph with
-            graph = nodes_from_segmentation(fragments)
+            graph = nodes_from_segmentation(fragments, size_threshold=size_threshold)
 
         # merge the fragments and add to history
         fragments[fragments == a] = c
@@ -95,8 +98,9 @@ def get_nodes(
             # add the new node to the graph
             new_seg_only = np.zeros_like(fragments)
             new_seg_only[fragments == c] = c
-            node_graph = nodes_from_segmentation(new_seg_only)
-            assert node_graph.number_of_nodes() == 1
+            node_graph = nodes_from_segmentation(
+                new_seg_only, size_threshold=size_threshold
+            )
             graph.add_nodes_from(node_graph.nodes(data=True))
 
             # add conflicting segs to conflict sets
@@ -129,6 +133,7 @@ def get_nodes(
         # filter out elements that didn't make it into the graph
         for conflict_set in conflicts:
             conflict_set = [node for node in conflict_set if node in graph.nodes]
-            exclusion_sets.append(conflict_set)
+            if len(conflict_set) > 1:
+                exclusion_sets.append(conflict_set)
 
     return graph, exclusion_sets
