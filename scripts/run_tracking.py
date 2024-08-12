@@ -1,11 +1,18 @@
 import csv
+import toml
 from pathlib import Path
-
+import os
+import datetime
+import argparse
 import zarr
 from darts_utils.tracking import solve_with_motile, utils
+from darts_utils.tracking import create_multihypo_graph
+import numpy as np
+import motile
+from motile_toolbox.candidate_graph import graph_to_nx
 
 
-def save_solution(solution_graph, csv_path):
+def save_solution_graph(solution_graph, csv_path):
     with open(csv_path, "w") as f:
         writer = csv.DictWriter(f, fieldnames=["time", "x", "y", "id", "parent_id"])
         writer.writeheader()
@@ -26,38 +33,88 @@ def save_solution(solution_graph, csv_path):
             }
             writer.writerow(row)
 
+def get_solution_seg(fragments, merge_history, solution_graph):
+    solution_seg = np.zeros_like(fragments)
 
-if __name__ == "__main__":
-    vid_num = 5
+    merge_dict = {}
+    for merge in merge_history:
+        a,b, c, score = merge
+        a = int(a)
+        b = int(b)
+        c = int(c)
+        children = [a, b]
+        if a in merge_dict:
+            children.extend(merge_dict[a])
+        if b in merge_dict:
+            children.extend(merge_dict[b])
+        merge_dict[c] = children
 
-    base_path = Path(f"/nrs/funke/data/darts/synthetic_data/test1/{vid_num}")
+    frag_ids = set(np.unique(fragments))
+    frag_ids.remove(0)
+
+    for node in solution_graph.nodes():
+        if node in merge_dict:
+            children = merge_dict[node]
+        else:
+            assert node in frag_ids, f"Node {node} not in merge dict or frag ids"
+            children = [node]
+        
+        for child in children:
+            assert np.all([solution_seg[fragments == child] == 0]), f"Child {child} fragment is already selected"
+            solution_seg[fragments == child] = node
+
+    return solution_seg
+        
+def run_tracking(config, video_base_path: Path):
+    current_datetime = datetime.datetime.now()
+    datetime_str = current_datetime.strftime('%Y-%m-%d_%H-%M-%S')
+    print(datetime_str)
+    base_path = Path(video_base_path)
+    exp_path = base_path / datetime_str
+    exp_path.mkdir()
     zarr_path = base_path / "data.zarr"
-    gt_csv_path = base_path / "gt_tracks.csv"
-    output_csv_path = base_path / "pred_tracks.csv"
+    merge_history_csv_path = base_path / "merge_history.csv"
+    config_filepath = exp_path / "config.toml"
+    output_filepath = exp_path / "pred_tracks.csv"
 
-    seg_group = "pred_mask_0.15"
+    with open(config_filepath, "w") as config_file:
+        toml.dump(config, config_file)
+
+    seg_group = "fragments"
+    output_seg_group = f"{datetime_str}_pred_mask"
+        
     max_edge_distance = 50
 
     zarr_root = zarr.open(zarr_path)
-    seg = zarr_root[seg_group][:]
+    fragments = zarr_root[seg_group][:]
+    max_node_id = np.max(fragments)
 
-    gt_tracks = utils.read_gt_tracks(zarr_path, gt_csv_path)
-    cand_graph = utils.nodes_from_segmentation(seg)
+    merge_history = create_multihypo_graph.load_merge_history(merge_history_csv_path)
+    merge_history = create_multihypo_graph.renumber_merge_history(merge_history, max_node_id)
+    cand_graph, exclusion_sets = create_multihypo_graph.get_nodes(
+        fragments, merge_history, min_score=0.1, max_score=0.3
+    )
+    # cand_graph = utils.add_hyper_elements(cand_graph)
+
     utils.add_cand_edges(cand_graph, max_edge_distance)
     utils.add_appear_ignore_attr(cand_graph)
-    utils.add_drift_dist_attr(cand_graph)
     utils.add_disappear(cand_graph)
+    track_graph = motile.TrackGraph(cand_graph, frame_attribute="time")
+    utils.add_drift_dist_attr(track_graph, drift=config["drift"])
 
-    solution_graph = solve_with_motile(cand_graph)
-    print("Solution")
-    print(
-        f"Our gt graph has {gt_tracks.number_of_nodes()} nodes and {gt_tracks.number_of_edges()} edges"
-    )
-    print(
-        f"Our solution graph has {solution_graph.number_of_nodes()} nodes and {solution_graph.number_of_edges()} edges"
-    )
-    print(
-        f"Candidate graph has {cand_graph.number_of_nodes()} nodes and {cand_graph.number_of_edges()} edges"
-    )
+    solution_graph = solve_with_motile(config, track_graph, exclusion_sets)
 
-    save_solution(solution_graph, output_csv_path)
+    save_solution_graph(solution_graph, output_filepath)
+    solution_seg = get_solution_seg(fragments, merge_history, solution_graph)
+    zarr_root[output_seg_group] = solution_seg
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("config")
+    parser.add_argument("data_dir", help="directory containing the data.zarr and other dataset specific files")
+    args = parser.parse_args()
+    config = toml.load(args.config)
+
+    run_tracking(config, args.data_dir)
+
