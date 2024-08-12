@@ -115,8 +115,8 @@ def get_nodes(
                 del conflict_sets[b]
             else:
                 conflicts.append([b, c])
-            print(conflicts)
-            conflict_sets[c] = conflicts
+            if len(conflicts) > 0:
+                conflict_sets[c] = conflicts
 
     for node in graph.nodes():
         cohesion_score = 1 - last_scores.get(node, 0.0)
@@ -126,6 +126,9 @@ def get_nodes(
 
     exclusion_sets = []
     for conflicts in conflict_sets.values():
-        exclusion_sets.extend(conflicts)
+        # filter out elements that didn't make it into the graph
+        for conflict_set in conflicts:
+            conflict_set = [node for node in conflict_set if node in graph.nodes]
+            exclusion_sets.append(conflict_set)
 
     return graph, exclusion_sets

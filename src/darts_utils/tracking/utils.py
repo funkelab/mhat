@@ -184,9 +184,8 @@ def add_disappear(cand_graph):
             cand_graph.nodes[node_id]["ignore_disappear"] = True
 
 
-def add_drift_dist_attr(cand_graph: motile.TrackGraph):
+def add_drift_dist_attr(cand_graph: motile.TrackGraph, drift=10):
 
-    drift = 10
     for edge in cand_graph.edges:
         if cand_graph.is_hyperedge(edge):
             us, vs = edge

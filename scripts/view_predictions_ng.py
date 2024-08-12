@@ -117,7 +117,9 @@ if __name__ == "__main__":
         print(group)
         data = root[group]
         print(data.shape)
-        if group in ["mask", "pred_mask", "fragments", "segmentation"]:
+        print(data.dtype)
+        print(np.min(data), np.max(data))
+        if group in ["mask", "fragments", "segmentation"] or "pred_mask" in group:
             with viewer.txn() as s:
                 visualize_segmentation(
                     s,

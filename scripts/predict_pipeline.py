@@ -4,6 +4,8 @@ import zarr
 import numpy as np
 from darts_utils.segmentation import MtlsdModel
 import waterz 
+import argparse
+import csv
 
 from scipy.ndimage import label
 from scipy.ndimage.filters import maximum_filter
@@ -11,7 +13,7 @@ from scipy.ndimage.morphology import distance_transform_edt
 from skimage.segmentation import watershed
 
 
-def predict(checkpoint, data_zarr, phase_group):
+def predict(checkpoint, data_zarr, phase_group, output_zarr, data_type="synthetic"):
     phase = gp.ArrayKey("PHASE")
     pred_lsds = gp.ArrayKey('PRED_LSDS')
     pred_affs = gp.ArrayKey('PRED_AFFS')
@@ -50,16 +52,13 @@ def predict(checkpoint, data_zarr, phase_group):
 
     lsd_shape = total_output_roi.get_shape() / voxel_size
     aff_shape = total_output_roi.get_shape() / voxel_size
-    print(total_output_roi)
-    print(lsd_shape)
-    print(aff_shape)
 
     # generating the zarr file for saving
-    zarrfile = zarr.open(data_zarr, 'a')
+    zarrfile = zarr.open(output_zarr, 'a')
 
    #zarrfile.create_dataset('phase', shape= total_input_roi.get_shape() / voxel_size)
-    zarrfile.create_dataset('pred_lsds', shape = (6, lsd_shape[0], lsd_shape[1], lsd_shape[2]))
-    zarrfile.create_dataset('pred_affs', shape = (2, aff_shape[0], aff_shape[1], aff_shape[2]))
+    zarrfile.create_dataset('pred_lsds', shape = (6, lsd_shape[0], lsd_shape[1], lsd_shape[2]), overwrite=True)
+    zarrfile.create_dataset('pred_affs', shape = (2, aff_shape[0], aff_shape[1], aff_shape[2]), overwrite=True)
 
     in_channels = 3
     num_fmaps = 16
@@ -83,10 +82,16 @@ def predict(checkpoint, data_zarr, phase_group):
     model.eval()
 
     pipeline = phase_source
-
-
-
-    pipeline += gp.Normalize(phase)
+    
+    if data_type == "synthetic":
+        print("Scaling by 1/65535")
+        scale_factor = 1/65535
+    elif data_type == "real":
+        print("Scaling by 1/3000")
+        scale_factor = 1/3000
+    else:
+        raise ValueError(f"data type must be synthetic or real, got {data_type}")
+    pipeline += gp.Normalize(phase, factor=scale_factor)
 
     #pipeline += gp.Unsqueeze([phase])
 
@@ -110,12 +115,11 @@ def predict(checkpoint, data_zarr, phase_group):
         pred_lsds: 'pred_lsds',
         pred_affs: 'pred_affs',
     }
-    print(data_zarr.parent, data_zarr.name)
 
     pipeline += gp.ZarrWrite(
         dataset_names = dataset_names,
-        output_dir = data_zarr.parent,
-        output_filename = data_zarr.name
+        output_dir = output_zarr.parent,
+        output_filename = output_zarr.name
     )
 
     pipeline += gp.Scan(scan_request)
@@ -186,12 +190,13 @@ def watershed_from_affinities(
         
     return fragments
 
-def get_segmentation(zarr_path, threshold):
+def get_segmentation(zarr_path, threshold, outfile):
     zarr_root = zarr.open(zarr_path, 'a')
     affinities = zarr_root["pred_affs"][:]
 
     fragments = watershed_from_affinities(affinities)
     zarr_root['fragments'] = fragments
+    zarr_root['fragments'].attrs['resolution'] = (1, 1, 1)
     thresholds = [threshold]
 
     ws_affs = np.stack([
@@ -210,8 +215,6 @@ def get_segmentation(zarr_path, threshold):
 
     segmentation, merge_history = next(generator)
     
-    zarr_root['pred_mask'] = segmentation
-    zarr_root['pred_mask'].attrs['resolution'] = (1, 1, 1)
     fields = ["a", "b", "c", "score"]
 
     with open (outfile, 'w') as f:
@@ -222,16 +225,27 @@ def get_segmentation(zarr_path, threshold):
     
 
 if __name__ == "__main__":
-
-    data_zarr = Path("/nrs/funke/data/darts/synthetic_data/test1/19.zarr")
-    phase_file = 'phase'
+    parser = argparse.ArgumentParser()
+    parser.add_argument("data_path", help="zarr with input data")
+    parser.add_argument("-op", "--output_path", default=None)
+    parser.add_argument("-dg", "--data_group", default="phase")
+    parser.add_argument("-dt", "--data_type", default="synthetic", help="synthetic or real")
+    parser.add_argument("-o", "--overwrite", action='store_true', help="overwrite existing affinity predictions")
+    args = parser.parse_args()
+    data_zarr = Path(args.data_path)
+    if args.output_path is not None:
+        output_zarr = Path(args.output_path)
+    else:
+        output_zarr = data_zarr
+    phase_file = args.data_group
     checkpoint = "/groups/funke/home/sistaa/code/SyMBac/model_checkpoint_100000"
 
-    data_root = zarr.open(data_zarr)
-    if "pred_affs" not in data_root:
-        predict(checkpoint, data_zarr, phase_file)
+    output_root = zarr.open(output_zarr)
+    if "pred_affs" not in output_root or args.overwrite:
+        predict(checkpoint, data_zarr, phase_file, output_zarr, args.data_type)
 
     threshold = 0.5
-
-    get_segmentation(data_zarr, threshold)
+    
+    merge_history_file = output_zarr.parent / "merge_history.csv"
+    get_segmentation(output_zarr, threshold, merge_history_file)
 
