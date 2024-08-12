@@ -1,15 +1,13 @@
-import csv
-import toml
-from pathlib import Path
-import os
-import datetime
 import argparse
-import zarr
-from darts_utils.tracking import solve_with_motile, utils
-from darts_utils.tracking import create_multihypo_graph
-import numpy as np
+import csv
+import datetime
+from pathlib import Path
+
 import motile
-from motile_toolbox.candidate_graph import graph_to_nx
+import numpy as np
+import toml
+import zarr
+from darts_utils.tracking import create_multihypo_graph, solve_with_motile, utils
 
 
 def save_solution_graph(solution_graph, csv_path):
@@ -33,12 +31,13 @@ def save_solution_graph(solution_graph, csv_path):
             }
             writer.writerow(row)
 
+
 def get_solution_seg(fragments, merge_history, solution_graph):
     solution_seg = np.zeros_like(fragments)
 
     merge_dict = {}
     for merge in merge_history:
-        a,b, c, score = merge
+        a, b, c, score = merge
         a = int(a)
         b = int(b)
         c = int(c)
@@ -58,16 +57,19 @@ def get_solution_seg(fragments, merge_history, solution_graph):
         else:
             assert node in frag_ids, f"Node {node} not in merge dict or frag ids"
             children = [node]
-        
+
         for child in children:
-            assert np.all([solution_seg[fragments == child] == 0]), f"Child {child} fragment is already selected"
+            assert np.all(
+                [solution_seg[fragments == child] == 0]
+            ), f"Child {child} fragment is already selected"
             solution_seg[fragments == child] = node
 
     return solution_seg
-        
+
+
 def run_tracking(config, video_base_path: Path):
     current_datetime = datetime.datetime.now()
-    datetime_str = current_datetime.strftime('%Y-%m-%d_%H-%M-%S')
+    datetime_str = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
     print(datetime_str)
     base_path = Path(video_base_path)
     exp_path = base_path / datetime_str
@@ -82,25 +84,33 @@ def run_tracking(config, video_base_path: Path):
 
     seg_group = "fragments"
     output_seg_group = f"{datetime_str}_pred_mask"
-        
-    max_edge_distance = 50
+
+    max_edge_distance = config["max_edge_distance"]
 
     zarr_root = zarr.open(zarr_path)
     fragments = zarr_root[seg_group][:]
     max_node_id = np.max(fragments)
 
     merge_history = create_multihypo_graph.load_merge_history(merge_history_csv_path)
-    merge_history = create_multihypo_graph.renumber_merge_history(merge_history, max_node_id)
-    cand_graph, exclusion_sets = create_multihypo_graph.get_nodes(
-        fragments, merge_history, min_score=0.1, max_score=0.3
+    merge_history = create_multihypo_graph.renumber_merge_history(
+        merge_history, max_node_id
     )
-    # cand_graph = utils.add_hyper_elements(cand_graph)
+    cand_graph, exclusion_sets = create_multihypo_graph.get_nodes(
+        fragments,
+        merge_history,
+        min_score=config["min_merge_score"],
+        max_score=config["max_merge_score"],
+    )
 
     utils.add_cand_edges(cand_graph, max_edge_distance)
+    print("Edges before hyperedges: ", cand_graph.number_of_edges())
+    cand_graph = utils.add_hyper_elements(cand_graph)
+    print("Edges after hyperedges: ", cand_graph.number_of_edges())
     utils.add_appear_ignore_attr(cand_graph)
     utils.add_disappear(cand_graph)
     track_graph = motile.TrackGraph(cand_graph, frame_attribute="time")
     utils.add_drift_dist_attr(track_graph, drift=config["drift"])
+    utils.add_area_diff_attr(track_graph)
 
     solution_graph = solve_with_motile(config, track_graph, exclusion_sets)
 
@@ -112,9 +122,11 @@ def run_tracking(config, video_base_path: Path):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("config")
-    parser.add_argument("data_dir", help="directory containing the data.zarr and other dataset specific files")
+    parser.add_argument(
+        "data_dir",
+        help="directory containing the data.zarr and other dataset specific files",
+    )
     args = parser.parse_args()
     config = toml.load(args.config)
 
     run_tracking(config, args.data_dir)
-
