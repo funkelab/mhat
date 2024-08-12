@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 from csv import DictReader
-from typing import Any, Iterable
-from motile.costs import Cost, Weight
-from motile.variables import EdgeSelected
 from itertools import combinations
+from typing import Any, Iterable
+
+import motile
 import networkx as nx
 import numpy as np
 import scipy
 import skimage
 import zarr
-import motile
+from motile.costs import Cost, Weight
+from motile.variables import EdgeSelected
 
 
 def nodes_from_segmentation(segmentation: np.ndarray) -> nx.DiGraph:
@@ -24,7 +25,6 @@ def nodes_from_segmentation(segmentation: np.ndarray) -> nx.DiGraph:
         nx.DiGraph: A candidate graph with only nodes.
     """
     cand_graph = nx.DiGraph()
-    print("Extracting nodes from segmentation")
     for t in range(len(segmentation)):
         seg_frame = segmentation[t]
         props = skimage.measure.regionprops(seg_frame)
@@ -35,7 +35,7 @@ def nodes_from_segmentation(segmentation: np.ndarray) -> nx.DiGraph:
                 "x": float(regionprop.centroid[0]),
                 "y": float(regionprop.centroid[1]),
                 "label": node_id,
-                "area": regionprop.area
+                "area": regionprop.area,
             }
             cand_graph.add_node(node_id, **attrs)
 
@@ -114,7 +114,6 @@ def add_cand_edges(
             to node ids. If not provided, it will be computed from cand_graph. Defaults
             to None.
     """
-    print("Extracting candidate edges")
     node_frame_dict = _compute_node_frame_dict(cand_graph)
 
     frames = sorted(node_frame_dict.keys())
@@ -174,33 +173,52 @@ def relabel_segmentation(
 
 def add_appear_ignore_attr(cand_graph):
     for node_id, attrs in cand_graph.nodes(data=True):
+        if "time" not in attrs:
+            continue  # skip hypernodes
         if attrs.get("time") == 0:
             cand_graph.nodes[node_id]["ignore_appear"] = True
 
 
 def add_disappear(cand_graph):
     for node_id, attrs in cand_graph.nodes(data=True):
+        if "time" not in attrs:
+            continue  # skip hypernodes
         if attrs.get("time") == 99 or attrs.get("x") > 380:
             cand_graph.nodes[node_id]["ignore_disappear"] = True
 
 
 def add_drift_dist_attr(cand_graph: motile.TrackGraph, drift=10):
-
     for edge in cand_graph.edges:
         if cand_graph.is_hyperedge(edge):
             us, vs = edge
             u = us[0]  # assume always one "source" node
             v1, v2 = vs  # assume always two "target" nodes
             pos_u = drift + cand_graph.nodes[u]["x"]
-            mean_pos_v = np.mean(cand_graph.nodes[v1]["x"], cand_graph.nodes[v2]["x"])
-            drift_dist = np.abs(pos_u - mean_pos_v)
-            cand_graph.edges[edge]["drift_dist"] = drift_dist
+            pos_v = (cand_graph.nodes[v1]["x"] + cand_graph.nodes[v2]["x"]) / 2
         else:
             u, v = edge
             pos_u = drift + cand_graph.nodes[u]["x"]
             pos_v = cand_graph.nodes[v]["x"]
-            drift_dist = np.abs(pos_u - pos_v)
-            cand_graph.edges[edge]["drift_dist"] = drift_dist
+
+        drift_dist = abs(pos_u - pos_v)
+        cand_graph.edges[edge]["drift_dist"] = drift_dist
+
+
+def add_area_diff_attr(cand_graph: motile.TrackGraph):
+    for edge in cand_graph.edges:
+        if cand_graph.is_hyperedge(edge):
+            us, vs = edge
+            u = us[0]  # assume always one "source" node
+            v1, v2 = vs  # assume always two "target" nodes
+            area_u = cand_graph.nodes[u]["area"]
+            area_v = cand_graph.nodes[v1]["area"] + cand_graph.nodes[v2]["area"]
+        else:
+            u, v = edge
+            area_u = cand_graph.nodes[u]["area"]
+            area_v = cand_graph.nodes[v]["area"]
+
+        area_diff = np.abs(area_u - area_v)
+        cand_graph.edges[edge]["area_diff"] = area_diff
 
 
 def load_prediction(csv_path):
@@ -219,28 +237,29 @@ def load_prediction(csv_path):
                 graph.add_edge(parent_id, node_id)
     return graph
 
+
 def add_hyper_elements(candidate_graph):
     nodes_original = list(candidate_graph.nodes)
     for node in nodes_original:
-        out_edges = candidate_graph.out_edges(node)
-        pairs = list(combinations(out_edges, 2))
+        successors = candidate_graph.successors(node)
+        pairs = list(combinations(successors, 2))
         for pair in pairs:
-            candidate_graph.add_node(
-                str(pair[0][0]) + "_" + str(pair[0][1]) + "_" + str(pair[1][1])
+            hypernode = str(node) + "_" + str(pair[0]) + "_" + str(pair[1])
+            candidate_graph.add_node(hypernode)
+            candidate_graph.add_edge(
+                node,
+                hypernode,
             )
             candidate_graph.add_edge(
-                pair[0][0],
-                str(pair[0][0] + "_" + str(pair[0][1]) + "_" + str(pair[1][1])),
+                hypernode,
+                pair[0],
             )
             candidate_graph.add_edge(
-                str(pair[0][0]) + "_" + str(pair[0][1]) + "_" + str(pair[1][1]),
-                pair[0][1],
-            )
-            candidate_graph.add_edge(
-                str(pair[0][0]) + "_" + str(pair[0][1]) + "_" + str(pair[1][1]),
-                pair[1][1],
+                hypernode,
+                pair[1],
             )
     return candidate_graph
+
 
 class HyperAreaSplit(Cost):
     def __init__(self, weight, area_attribute, constant):
@@ -264,7 +283,6 @@ class HyperAreaSplit(Cost):
                 solver.add_variable_cost(index, 0.0, self.weight)
                 solver.add_variable_cost(index, 0.0, self.constant)
 
-    
     def __get_node_area(self, graph: nx.DiGraph, node: int) -> np.ndarray:
         if isinstance(self.area_attribute, tuple):
             return np.array([graph.nodes[node][p] for p in self.area_attribute])
