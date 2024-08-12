@@ -19,6 +19,8 @@ if __name__ == "__main__":
     parser.add_argument("-e", "--end_frame", type=int, default=None)
     args = parser.parse_args()
 
+    dt = "2024-08-08_15-35-31"
+
     exp_path = Path(args.exp_path)
     data_path = exp_path.parent
     experiment = exp_path.stem

@@ -10,9 +10,9 @@ def segmentation_eval_info(dt):
     total_FN = 0
     results = []
 
-    for file_num in range(1,11):
+    for file_num in range(1,101):
 
-        base_path = Path(f'/nrs/funke/data/darts/synthetic_data/validation1/{file_num}/{dt}')
+        base_path = Path(f'/nrs/funke/data/darts/synthetic_data/test1/{file_num}/{dt}')
 
         csv_file = base_path / "mask_eval.csv"
         with open(csv_file, "r") as f:
@@ -43,19 +43,32 @@ def division_info(dt):
     total_TP = 0
     total_FP = 0
     total_FN = 0
-    for file_num in range(1, 11):
-        base_path = Path(f'/nrs/funke/data/darts/synthetic_data/validation1/{file_num}/{dt}')
+    for file_num in range(1, 101):
+        base_path = Path(f'/nrs/funke/data/darts/synthetic_data/test1/{file_num}/{dt}')
         json_path = base_path / "track_metrics.json"
 
         with open(json_path, 'r') as f:
             data = json.load(f)
 
-            for entry in data: 
-                if "results" in entry and "Frame Buffer 0" in entry["results"]:
-                    results = entry["results"]["Frame Buffer 0"]
-                    total_TP += results.get("True Positive Divisions", 0)
-                    total_FP += results.get("False Positive Divisions", 0)
-                    total_FN += results.get("False Negative Divisions", 0)
+        # for entry in data:
+        #     results = entry["results"]
+        #     if isinstance(results, dict):
+        #         for i in range(2):  
+        #             frame_buffer_key = f"Frame Buffer {i}"
+        #             if frame_buffer_key in results:
+        #                 frame_buffer_results = results[frame_buffer_key]
+        #                 if isinstance(frame_buffer_results, dict):  
+        #                     total_TP += frame_buffer_results.get("True Positive Divisions", 0)
+        #                     total_FP += frame_buffer_results.get("False Positive Divisions", 0)
+        #                     total_FN += frame_buffer_results.get("False Negative Divisions", 0)
+
+        for entry in data: 
+            if "results" in entry and "Frame Buffer 2" in entry["results"]:
+                results = entry["results"]["Frame Buffer 2"]
+                total_TP += results.get("True Positive Divisions", 0)
+                total_FP += results.get("False Positive Divisions", 0)
+                total_FN += results.get("False Negative Divisions", 0)
+    
     
     precision = total_TP / (total_TP + total_FP) if (total_TP + total_FP) > 0 else 0
     recall = total_TP / (total_TP + total_FN) if (total_TP + total_FN) > 0 else 0
@@ -75,8 +88,8 @@ def division_info(dt):
 def average_TRA(dt):
     total_TRA = 0
     count = 0
-    for file_num in range(1, 11):
-        base_path = Path(f'/nrs/funke/data/darts/synthetic_data/validation1/{file_num}/{dt}')
+    for file_num in range(1, 101):
+        base_path = Path(f'/nrs/funke/data/darts/synthetic_data/test1/{file_num}/{dt}')
         json_path = base_path / "track_metrics.json"
 
         with open(json_path, 'r') as f:
@@ -93,9 +106,10 @@ def average_TRA(dt):
     return score
 
 if __name__ in "__main__":
-    dt = "2024-08-06_13-48-48"
-    making_dir = os.mkdir(f"/nrs/funke/data/darts/synthetic_data/validation1/results/{dt}")
-    json_path = f"/nrs/funke/data/darts/synthetic_data/validation1/results/{dt}/evaluation_metrics.json"
+    dt = '2024-08-09_15-40-36'
+    # making_dir = os.mkdir(f"/nrs/funke/data/darts/synthetic_data/test1/results")
+    make_dir = os.mkdir(f"/nrs/funke/data/darts/synthetic_data/test1/results/{dt}")
+    json_path = f"/nrs/funke/data/darts/synthetic_data/test1/results/{dt}/evaluation_metrics.json"
 
     # try:
     #     os.makedirs(json_path)

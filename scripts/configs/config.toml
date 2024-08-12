@@ -1,8 +1,6 @@
 
 edge_selection_weight = 1.0
 edge_selection_constant = -70.0
-hyper_weight = 2
-hyper_constant = -10000
 cohesion_weight = -7
 cohesion_constant = 1
 adhesion_weight = -7

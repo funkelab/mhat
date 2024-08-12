@@ -187,7 +187,7 @@ def add_disappear(cand_graph):
 def add_drift_dist_attr(cand_graph: motile.TrackGraph):
 
     drift = 10
-    for edge in cand_graph.edges():
+    for edge in cand_graph.edges:
         if cand_graph.is_hyperedge(edge):
             us, vs = edge
             u = us[0]  # assume always one "source" node
