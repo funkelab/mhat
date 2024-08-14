@@ -10,8 +10,6 @@ import numpy as np
 import scipy
 import skimage
 import zarr
-from motile.costs import Cost, Weight
-from motile.variables import EdgeSelected
 
 
 def nodes_from_segmentation(
@@ -245,7 +243,17 @@ def load_prediction(csv_path):
     return graph
 
 
-def add_hyper_elements(candidate_graph):
+def add_division_hyperedges(candidate_graph: nx.DiGraph) -> nx.DiGraph:
+    """Add hyper edges representing specific divisions to the graph
+
+    Args:
+        candidate_graph (nx.DiGraph): A candidate graph already populated with
+            normal nodes and edges.
+
+    Returns:
+        nx.DiGraph: The candidate graph with additional hypernodes for each
+            possible division
+    """
     nodes_original = list(candidate_graph.nodes)
     for node in nodes_original:
         successors = candidate_graph.successors(node)
@@ -266,32 +274,3 @@ def add_hyper_elements(candidate_graph):
                 pair[1],
             )
     return candidate_graph
-
-
-class HyperAreaSplit(Cost):
-    def __init__(self, weight, area_attribute, constant):
-        self.weight = Weight(weight)
-        self.constant = Weight(constant)
-        self.area_attribute = area_attribute
-
-    def apply(self, solver):
-        edge_variables = solver.get_variables(EdgeSelected)
-        for key, index in edge_variables.items():
-            if type(key[1]) is tuple:
-                (start,) = key[0]
-                end1, end2 = key[1]
-                area_start = self.__get_node_area(solver.graph, start)
-                area_end1 = self.__get_node_area(solver.graph, end1)
-                area_end2 = self.__get_node_area(solver.graph, end2)
-                feature = np.linalg.norm(area_start - (area_end1 + area_end2))
-                solver.add_variable_cost(index, feature, self.weight)
-                solver.add_variable_cost(index, 1.0, self.constant)
-            else:
-                solver.add_variable_cost(index, 0.0, self.weight)
-                solver.add_variable_cost(index, 0.0, self.constant)
-
-    def __get_node_area(self, graph: nx.DiGraph, node: int) -> np.ndarray:
-        if isinstance(self.area_attribute, tuple):
-            return np.array([graph.nodes[node][p] for p in self.area_attribute])
-        else:
-            return np.array(graph.nodes[node][self.area_attribute])
