@@ -3,6 +3,11 @@ from funlib.learn.torch.models import ConvPass, UNet
 
 
 class MtlsdModel(torch.nn.Module):
+    """A model to predict affinities and lsds. Takes in 3D (time, x, y) data
+    and outputs (1, x, y). Affinities and LSDs are two dimensional, but
+    additional time points are passed to give the model context.
+    """
+
     def __init__(
         self,
         in_channels,
@@ -12,6 +17,8 @@ class MtlsdModel(torch.nn.Module):
         kernel_size_down,
         kernel_size_up,
         constant_upsample,
+        num_lsd_channels: int = 6,
+        num_aff_channels: int = 2,
     ):
         super().__init__()
 
@@ -28,8 +35,12 @@ class MtlsdModel(torch.nn.Module):
         )
 
         # create lsd and affs heads
-        self.lsd_head = ConvPass(num_fmaps, 6, [[1, 1]], activation="Sigmoid")
-        self.aff_head = ConvPass(num_fmaps, 2, [[1, 1]], activation="Sigmoid")
+        self.lsd_head = ConvPass(
+            num_fmaps, num_lsd_channels, [[1, 1]], activation="Sigmoid"
+        )
+        self.aff_head = ConvPass(
+            num_fmaps, num_aff_channels, [[1, 1]], activation="Sigmoid"
+        )
 
     def forward(self, input):
         # pass raw through unet
@@ -45,12 +56,9 @@ class MtlsdModel(torch.nn.Module):
         return lsds, affs
 
 
-# combine the lsds and affs losses
-
-
 class WeightedMSELoss(torch.nn.MSELoss):
     def __init__(self):
-        super(WeightedMSELoss, self).__init__()
+        super().__init__()
 
     def _calc_loss(self, pred, target, weights):
         scaled = weights * (pred - target) ** 2
@@ -73,10 +81,6 @@ class WeightedMSELoss(torch.nn.MSELoss):
         affs_target,
         affs_weights,
     ):
-        print(f"{lsds_prediction.shape=}")
-        print(f"{lsds_target.shape=}")
-        print(f"{affs_prediction.shape=}")
-        print(f"{affs_target.shape=}")
         loss1 = self._calc_loss(lsds_prediction, lsds_target, lsds_weights)
         loss2 = self._calc_loss(affs_prediction, affs_target, affs_weights)
 
