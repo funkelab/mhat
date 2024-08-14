@@ -7,30 +7,37 @@ from gunpowder.nodes import BatchFilter
 
 
 class NoiseAugment(BatchFilter):
-    """Add random noise to an array. Uses the scikit-image function skimage.util.random_noise.
-    See scikit-image documentation for more information on arguments and additional kwargs.
+    """Add a random amount of gaussian noise to an array. The variance of the
+    noise gaussian will be uniformly sampled between the provided min and max.
+    Uses the scikit-image function skimage.util.random_noise.
 
     Args:
 
         array (:class:`ArrayKey`):
 
-            The intensity array to modify. Should be of type float and within range [-1, 1] or [0, 1].
+            The intensity array to modify. Should be of type float and within
+            range [-1, 1] or [0, 1].
 
-        mode (``string``):
+        noise_min (``float``):
 
-            Type of noise to add, see scikit-image documentation.
+            The minimum variance of noise to add
+
+        noise_max(``float``):
+
+            The maximum variance of noise to add
 
         clip (``bool``):
 
-            Whether to preserve the image range (either [-1, 1] or [0, 1]) by clipping values in the end, see
-            scikit-image documentation
+            Whether to preserve the image range (either [-1, 1] or [0, 1]) by
+            clipping values in the end, see scikit-image documentation
     """
 
-    def __init__(self, array, mode="gaussian", clip=True, **kwargs):
+    def __init__(self, array, noise_min=0.0, noise_max=0.2, clip=True):
         self.array = array
-        self.mode = mode
+        self.mode = "gaussian"
+        self.noise_min = noise_min
+        self.noise_max = noise_max
         self.clip = clip
-        self.kwargs = kwargs
 
     def setup(self):
         self.enable_autoskip()
@@ -44,15 +51,17 @@ class NoiseAugment(BatchFilter):
     def process(self, batch, request):
         raw = batch.arrays[self.array]
 
-        assert raw.data.dtype == np.float32 or raw.data.dtype == np.float64, (
-            "Noise augmentation requires float types for the raw array (not "
-            + str(raw.data.dtype)
-            + "). Consider using Normalize before."
-        )
-        if self.clip:
-            assert (
-                raw.data.min() >= -1 and raw.data.max() <= 1
-            ), "Noise augmentation expects raw values in [-1,1] or [0,1]. Consider using Normalize before."
+        if raw.data.dtype not in [np.float32, np.float64]:
+            raise ValueError(
+                "Noise augmentation requires float types for the raw array (not "
+                + str(raw.data.dtype)
+                + "). Consider using Normalize before."
+            )
+        if self.clip and (raw.data.min() >= -1 or raw.data.max() <= 1):
+            raise ValueError(
+                "Noise augmentation expects raw values in [-1,1]"
+                " or [0,1]. Consider using Normalize before."
+            )
 
         seed = request.random_seed
 
@@ -62,8 +71,7 @@ class NoiseAugment(BatchFilter):
                 mode=self.mode,
                 rng=seed,
                 clip=self.clip,
-                var=random.uniform(0, 0.1),
-                **self.kwargs,
+                var=random.uniform(self.noise_min, self.noise_max),
             ).astype(raw.data.dtype)
 
         except ValueError:

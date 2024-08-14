@@ -86,9 +86,9 @@ class AddLocalShapeDescriptor(BatchFilter):
         self.unlabelled = unlabelled
         self.components = components
 
-        try:
+        if isinstance(sigma, (tuple, list)):
             self.sigma = tuple(sigma)
-        except:
+        else:
             self.sigma = (sigma,) * 3
 
         self.mode = mode
@@ -96,7 +96,7 @@ class AddLocalShapeDescriptor(BatchFilter):
         self.voxel_size = None
         self.context = None
         self.skip = False
-
+        # the LSD extractor should be two dimensional (ignore time)
         self.extractor = LsdExtractor(self.sigma[1:], self.mode, self.downsample)
 
     def setup(self):
@@ -115,7 +115,7 @@ class AddLocalShapeDescriptor(BatchFilter):
         elif self.mode == "sphere":
             self.context = tuple(self.sigma)
         else:
-            raise RuntimeError("Unkown mode %s" % self.mode)
+            raise RuntimeError(f"Unknown mode {self.mode}")
 
     def prepare(self, request):
         deps = BatchRequest()
@@ -177,7 +177,7 @@ class AddLocalShapeDescriptor(BatchFilter):
         seg_data = segmentation_array.crop(intersection_roi).data
 
         descriptors = []
-        for time, seg_slice in enumerate(seg_data):
+        for seg_slice in seg_data:
             slice_roi = Roi(voxel_roi_in_seg.offset[1:], voxel_roi_in_seg.shape[1:])
 
             descriptor_slice = self.extractor.get_descriptors(
@@ -238,6 +238,6 @@ class AddLocalShapeDescriptor(BatchFilter):
 
         mask = np.array([mask] * lsds.shape[0])
 
-        mask = mask[(slice(None),) + crop]
+        mask = mask[(slice(None), *crop)]
 
         return mask
