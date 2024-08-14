@@ -1,7 +1,7 @@
 import logging
 
 import numpy as np
-from gunpowder import Array, Batch, BatchFilter, BatchRequest, Coordinate, Roi
+from gunpowder import Array, Batch, BatchFilter, BatchRequest, Roi
 from lsd.train import LsdExtractor
 
 logger = logging.getLogger(__name__)
@@ -44,8 +44,8 @@ class AddLocalShapeDescriptor(BatchFilter):
             ``sphere`` accumulates values in a sphere.
 
         components (string, optional): The components of the local shape descriptors to
-            compute and return. Should be a string of integers chosen from 0 through 9 
-            (if 3D) or 6 (if 2D), in order. Example: "0129" or "345". 
+            compute and return. Should be a string of integers chosen from 0 through 9
+            (if 3D) or 6 (if 2D), in order. Example: "0129" or "345".
             Defaults to all components.
 
             Component string lookup, where example component : "3D axes", "2D axes"
@@ -127,7 +127,8 @@ class AddLocalShapeDescriptor(BatchFilter):
 
             # increase segmentation ROI to fit Gaussian (in y and x)
             context_roi = request[self.descriptor].roi.grow(
-               self.context, self.context,
+                self.context,
+                self.context,
             )
 
             # ensure context roi is multiple of voxel size
@@ -159,17 +160,17 @@ class AddLocalShapeDescriptor(BatchFilter):
         # get voxel roi of requested descriptors
         # this is the only region in
         # which we have to compute the descriptors
-        seg_roi = segmentation_array.spec.roi   # with the context (-60, -60) offset
+        seg_roi = segmentation_array.spec.roi  # with the context (-60, -60) offset
         offset = seg_roi.get_offset()
-        seg_roi = seg_roi - offset # now starts at (0, 0)
+        seg_roi = seg_roi - offset  # now starts at (0, 0)
         descriptor_roi = request[self.descriptor].roi  # no context (0, 0) offset
-        descriptor_roi = descriptor_roi - offset # now starts at (60, 60)
+        descriptor_roi = descriptor_roi - offset  # now starts at (60, 60)
         voxel_roi_in_seg = (
             seg_roi.intersect(descriptor_roi) - seg_roi.get_offset()
         ) / self.voxel_size
 
         crop = voxel_roi_in_seg.get_bounding_box()
-        
+
         time_roi = descriptor_spec.roi.grow((0, None, None), (0, None, None))
 
         intersection_roi = time_roi.intersect(segmentation_array.spec.roi)
@@ -195,8 +196,8 @@ class AddLocalShapeDescriptor(BatchFilter):
         descriptor_array = Array(descriptor, descriptor_spec)
 
         old_batch = batch
-        seg_roi = seg_roi + offset # now starts at (-60, -60)
-        descriptor_roi = descriptor_roi + offset # back to (0, 0)
+        seg_roi = seg_roi + offset  # now starts at (-60, -60)
+        descriptor_roi = descriptor_roi + offset  # back to (0, 0)
 
         # Create new batch for descriptor:
         batch = Batch()

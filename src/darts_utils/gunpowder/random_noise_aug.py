@@ -1,9 +1,8 @@
-import numpy as np
-import skimage
 import random
 
+import numpy as np
+import skimage
 from gunpowder.batch_request import BatchRequest
-
 from gunpowder.nodes import BatchFilter
 
 
@@ -59,7 +58,12 @@ class NoiseAugment(BatchFilter):
 
         try:
             raw.data = skimage.util.random_noise(
-                raw.data, mode=self.mode, rng=seed, clip=self.clip, var=random.uniform(0,0.1),**self.kwargs
+                raw.data,
+                mode=self.mode,
+                rng=seed,
+                clip=self.clip,
+                var=random.uniform(0, 0.1),
+                **self.kwargs,
             ).astype(raw.data.dtype)
 
         except ValueError:

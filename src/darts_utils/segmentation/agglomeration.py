@@ -1,6 +1,8 @@
 import csv
 from pathlib import Path
+
 import numpy as np
+
 
 def compute_segmentation(fragments: np.ndarray, merge_history: Path, threshold: float):
     """Takes fragments and a merge history, and merges the fragments up until the threshold.
@@ -9,7 +11,7 @@ def compute_segmentation(fragments: np.ndarray, merge_history: Path, threshold: 
     Args:
         fragments (np.ndarray): Fragments that have already been run through waterz
         merge_history (Path): Result of running waterz on fragments with pretty high threshold
-        threshold (float): The score threshold to merge until. If it is bigger than 
+        threshold (float): The score threshold to merge until. If it is bigger than
             the largest in the merge history, nothing more will merge.
 
     Returns:
