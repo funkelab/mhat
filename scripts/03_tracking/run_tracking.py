@@ -95,7 +95,7 @@ def run_tracking(config, video_base_path: Path):
     merge_history = create_multihypo_graph.renumber_merge_history(
         merge_history, max_node_id
     )
-    cand_graph, exclusion_sets = create_multihypo_graph.get_nodes(
+    cand_graph, exclusion_sets = create_multihypo_graph.nodes_from_fragments(
         fragments,
         merge_history,
         min_score=config["min_merge_score"],
@@ -105,7 +105,7 @@ def run_tracking(config, video_base_path: Path):
 
     utils.add_cand_edges(cand_graph, max_edge_distance)
     print("Edges before hyperedges: ", cand_graph.number_of_edges())
-    cand_graph = utils.add_hyper_elements(cand_graph)
+    cand_graph = utils.add_division_hyperedges(cand_graph)
     print("Edges after hyperedges: ", cand_graph.number_of_edges())
     utils.add_appear_ignore_attr(cand_graph)
     utils.add_disappear(cand_graph)
@@ -127,7 +127,13 @@ if __name__ == "__main__":
         "data_dir",
         help="directory containing the data.zarr and other dataset specific files",
     )
+    parser.add_argument("--all", action="store_true", help="Run on all subdirectories of the given directory")
     args = parser.parse_args()
     config = toml.load(args.config)
-
-    run_tracking(config, args.data_dir)
+    data_dir = Path(args.data_dir)
+    if args.all:
+        for subdir in data_dir.iterdir():
+            print(subdir.is_dir())
+            run_tracking(config, subdir)
+    else:
+        run_tracking(config, data_dir)

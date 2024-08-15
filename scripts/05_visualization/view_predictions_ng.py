@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 import neuroglancer as ng
 import neuroglancer.cli as ngcli
-from darts_utils.segmentation import compute_segmentation
+from darts_utils.segmentation import agglomerate
 
 import zarr
 import numpy as np
@@ -161,7 +161,7 @@ if __name__ == "__main__":
     if args.threshold is not None:
         fragments = root["fragments"][:]
         merge_history = Path(base_path).parent / "merge_history.csv"
-        segmentation = compute_segmentation(fragments, merge_history, threshold)
+        segmentation = agglomerate(fragments, merge_history, threshold)
         with viewer.txn() as s:
             visualize_segmentation(
                 s,
