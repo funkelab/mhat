@@ -127,7 +127,11 @@ if __name__ == "__main__":
         "data_dir",
         help="directory containing the data.zarr and other dataset specific files",
     )
-    parser.add_argument("--all", action="store_true", help="Run on all subdirectories of the given directory")
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Run on all subdirectories of the given directory",
+    )
     args = parser.parse_args()
     config = toml.load(args.config)
     data_dir = Path(args.data_dir)

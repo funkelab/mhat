@@ -1,12 +1,12 @@
 import argparse
 import logging
 from pathlib import Path
+
 import neuroglancer as ng
 import neuroglancer.cli as ngcli
-from darts_utils.segmentation import agglomerate
-
-import zarr
 import numpy as np
+import zarr
+from darts_utils.segmentation import agglomerate
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +14,7 @@ logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s %(name)s %(levelname)-8s %(message)s"
 )
 
-rgb_shader_code = '''
+rgb_shader_code = """
 void main() {
     emitRGB(
         %f*vec3(
@@ -22,14 +22,10 @@ void main() {
             toNormalized(getDataValue(%i)),
             toNormalized(getDataValue(%i)))
         );
-}'''
+}"""
 
-def visualize_lsds(
-    viewer_context,
-    data,
-    name,
-    voxel_offset=None
-):
+
+def visualize_lsds(viewer_context, data, name, voxel_offset=None):
     shader = rgb_shader_code % (1.0, 0, 1, 2)
     channels_dim = 0
     for i in range(0, data.shape[channels_dim], 3):
@@ -44,7 +40,7 @@ def visualize_lsds(
                 scales=[1, 1, 1, 1],
             ),
             volume_type="image",
-        voxel_offset = voxel_offset,
+            voxel_offset=voxel_offset,
         )
         viewer_context.layers[name + f"_{i}-{end_channel}"] = ng.ImageLayer(
             source=layer,
@@ -66,7 +62,7 @@ def visualize_image(
             scales=[1, 1, 1],
         ),
         volume_type="image",
-        voxel_offset = voxel_offset,
+        voxel_offset=voxel_offset,
     )
     # compute shader normalization ranges from one time point
     target_time = data.shape[0] // 2
@@ -93,15 +89,17 @@ def visualize_segmentation(
             scales=[1, 1, 1],
         ),
         volume_type="segmentation",
-        voxel_offset = voxel_offset
+        voxel_offset=voxel_offset,
     )
-    
+
     viewer_context.layers.append(name=name, layer=layer)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("path_to_zarr",)
+    parser.add_argument(
+        "path_to_zarr",
+    )
     parser.add_argument("-g", "--groups", nargs="+")
     parser.add_argument("-t", "--threshold", type=float, default=None)
     ngcli.add_server_arguments(parser)
@@ -112,7 +110,7 @@ if __name__ == "__main__":
 
     viewer = ng.Viewer()
     root = zarr.open(base_path)
-        
+
     for group in args.groups:
         print(group)
         data = root[group]
@@ -126,7 +124,7 @@ if __name__ == "__main__":
                     data,
                     group,
                 )
-        elif group in ["gt_affs", "affs_weights", "pred_affs"] :
+        elif group in ["gt_affs", "affs_weights", "pred_affs"]:
             affs_y = data[0]
             affs_x = data[1]
             with viewer.txn() as s:
@@ -150,14 +148,10 @@ if __name__ == "__main__":
                 )
         elif group == "phase":
             with viewer.txn() as s:
-                visualize_image(
-                    s,
-                    data,
-                    group
-                )
+                visualize_image(s, data, group)
         else:
             raise ValueError(f"Couldn't visualize group {group}")
-    
+
     if args.threshold is not None:
         fragments = root["fragments"][:]
         merge_history = Path(base_path).parent / "merge_history.csv"

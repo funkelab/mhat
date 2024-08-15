@@ -1,15 +1,16 @@
-import traccuracy
-from traccuracy import run_metrics
-from traccuracy.metrics import CTCMetrics, DivisionMetrics
-from traccuracy.matchers import CTCMatcher, IOUMatcher
-from darts_utils.tracking import utils
-import pandas as pd
-import json
-import zarr
 import csv
-import networkx as nx
+import json
 from pathlib import Path
+
+import networkx as nx
+import traccuracy
+import zarr
+from darts_utils.tracking import utils
 from evaluate import evaluate_masks
+from traccuracy import run_metrics
+from traccuracy.matchers import IOUMatcher
+from traccuracy.metrics import CTCMetrics, DivisionMetrics
+
 
 def get_metrics(gt_graph, labels, pred_graph, pred_segmentation):
     """Calculate metrics for linked tracks by comparing to ground truth.
@@ -49,6 +50,7 @@ def get_metrics(gt_graph, labels, pred_graph, pred_segmentation):
 
     return results
 
+
 def load_prediction(csv_path):
     with open(csv_path) as f:
         reader = csv.DictReader(f)
@@ -59,7 +61,7 @@ def load_prediction(csv_path):
                 "time": int(float(row["time"])),
                 "x": int(float(row["x"])),
                 "y": int(float(row["y"])),
-                "label": node_id
+                "label": node_id,
             }
             parent_id = int(float(row["parent_id"]))
             graph.add_node(node_id, **attrs)
@@ -67,31 +69,30 @@ def load_prediction(csv_path):
                 graph.add_edge(parent_id, node_id)
     return graph
 
+
 if __name__ in "__main__":
+    dt = "2024-08-09_15-40-36"
 
-    dt = '2024-08-09_15-40-36'
-
-    for vid_num in range(1,101):
+    for vid_num in range(1, 101):
         base_path = Path(f"/nrs/funke/data/darts/synthetic_data/test1/{vid_num}")
         dt_path = Path(f"/nrs/funke/data/darts/synthetic_data/test1/{vid_num}/{dt}")
         zarr_path = base_path / "data.zarr"
         gt_csv_path = base_path / "gt_tracks.csv"
-        output_csv_path = dt_path / f"multihypo_pred_tracks.csv"
+        output_csv_path = dt_path / "multihypo_pred_tracks.csv"
 
         zarr_root = zarr.open(zarr_path)
         gt_labels = zarr_root["mask"][:]
 
         hypo_mask = zarr_root[f"{dt}_multihypo_pred_mask"][:]
 
-        #run evaluation for the hypo mask and gt mask
-        csv_filepath = dt_path / 'mask_eval.csv'
+        # run evaluation for the hypo mask and gt mask
+        csv_filepath = dt_path / "mask_eval.csv"
         results = evaluate_masks(csv_filepath, gt_labels, hypo_mask)
 
         gt_tracks = utils.read_gt_tracks(zarr_path, gt_csv_path)
         pred_tracks = load_prediction(output_csv_path)
 
         eval = get_metrics(gt_tracks, gt_labels, pred_tracks, hypo_mask)
-        output_file = dt_path / 'track_metrics.json'
-        with open(output_file, 'w') as f:
+        output_file = dt_path / "track_metrics.json"
+        with open(output_file, "w") as f:
             json.dump(eval, f, indent=4)
-   

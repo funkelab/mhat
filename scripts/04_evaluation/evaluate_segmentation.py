@@ -1,18 +1,15 @@
 from __future__ import annotations
-import zarr
-from pathlib import Path
-from itertools import product
-from typing import Any
+
 import csv
-import matplotlib.pyplot as plt
-import networkx as nx
+from pathlib import Path
+
 import numpy as np
-from tqdm import tqdm
-import os
+import zarr
 
 
 def _compute_ious(
-    frame1: np.ndarray, frame2: np.ndarray) -> list[tuple[int, int, float]]:
+    frame1: np.ndarray, frame2: np.ndarray
+) -> list[tuple[int, int, float]]:
     """Compute label IOUs between two label arrays of the same shape. Ignores background
     (label 0).
 
@@ -45,7 +42,13 @@ def _compute_ious(
         ious.append((id1, id2, intersection / union))
     return ious
 
-def evaluate_masks(csv_filepath, gt_masks: np.ndarray, pred_masks: np.ndarray, iou_threshold: float = 0.5) -> list[dict]:
+
+def evaluate_masks(
+    csv_filepath,
+    gt_masks: np.ndarray,
+    pred_masks: np.ndarray,
+    iou_threshold: float = 0.5,
+) -> list[dict]:
     results = []
     for t in range(gt_masks.shape[0]):
         ious = _compute_ious(gt_masks[t], pred_masks[t])
@@ -61,23 +64,45 @@ def evaluate_masks(csv_filepath, gt_masks: np.ndarray, pred_masks: np.ndarray, i
         false_negatives = len(gt_ids - matched_gt_ids)
         true_positives = len(matched_gt_ids)
 
-        precision = true_positives / (true_positives + false_positives) if (true_positives + false_positives) > 0 else 0
-        recall = true_positives / (true_positives + false_negatives) if (true_positives + false_negatives) > 0 else 0
-        f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+        precision = (
+            true_positives / (true_positives + false_positives)
+            if (true_positives + false_positives) > 0
+            else 0
+        )
+        recall = (
+            true_positives / (true_positives + false_negatives)
+            if (true_positives + false_negatives) > 0
+            else 0
+        )
+        f1_score = (
+            2 * (precision * recall) / (precision + recall)
+            if (precision + recall) > 0
+            else 0
+        )
 
-        results.append({
-            "time_frame": t,
-            "true_positives": true_positives,
-            "false_positives": false_positives,
-            "false_negatives": false_negatives,
-            "precision": precision,
-            "recall": recall,
-            "f1_score": f1_score
-        })
+        results.append(
+            {
+                "time_frame": t,
+                "true_positives": true_positives,
+                "false_positives": false_positives,
+                "false_negatives": false_negatives,
+                "precision": precision,
+                "recall": recall,
+                "f1_score": f1_score,
+            }
+        )
 
     outfile = csv_filepath
-    fields = ["time_frame", "true_positives", "false_positives", "false_negatives", "precision", "recall", "f1_score"]
-    with open (outfile, 'w') as f:
+    fields = [
+        "time_frame",
+        "true_positives",
+        "false_positives",
+        "false_negatives",
+        "precision",
+        "recall",
+        "f1_score",
+    ]
+    with open(outfile, "w") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
         for row in results:
@@ -85,19 +110,19 @@ def evaluate_masks(csv_filepath, gt_masks: np.ndarray, pred_masks: np.ndarray, i
 
     return results
 
+
 if __name__ == "__main__":
-
-
     for file_num in range(1, 101):
-        zarr_dir = Path(f"/nrs/funke/data/darts/synthetic_data/test1/{file_num}/data.zarr")
+        zarr_dir = Path(
+            f"/nrs/funke/data/darts/synthetic_data/test1/{file_num}/data.zarr"
+        )
         root = zarr.open(zarr_dir, "a")
         gt_mask = root["mask"][:]
         pred_mask = root["pred_mask_0.15"][:]
-        csv_fp = zarr_dir.parent / 'new_evaluation.csv'
+        csv_fp = zarr_dir.parent / "new_evaluation.csv"
 
         results = evaluate_masks(zarr_dir, csv_fp, gt_mask, pred_mask)
 
-    
         f1 = [result["f1_score"] for result in results]
         time = [result["time_frame"] for result in results]
 
@@ -110,4 +135,3 @@ if __name__ == "__main__":
         # save = (zarr_dir.parent / f"f1_histogram_plt_{file_num}.png")
         # plt.savefig(save)
         # plt.close()
-

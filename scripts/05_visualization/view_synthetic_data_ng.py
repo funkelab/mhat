@@ -1,11 +1,11 @@
 import argparse
 import logging
 from pathlib import Path
+
 import neuroglancer as ng
 import neuroglancer.cli as ngcli
-
-import zarr
 import numpy as np
+import zarr
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +13,7 @@ logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s %(name)s %(levelname)-8s %(message)s"
 )
 
-rgb_shader_code = '''
+rgb_shader_code = """
 void main() {
     emitRGB(
         %f*vec3(
@@ -21,7 +21,8 @@ void main() {
             toNormalized(getDataValue(%i)),
             toNormalized(getDataValue(%i)))
         );
-}'''
+}"""
+
 
 def visualize_lsds(
     viewer_context,
@@ -40,7 +41,7 @@ def visualize_lsds(
                 scales=[1, 1, 1, 1, 1],
             ),
             volume_type="image",
-        voxel_offset = [0, 0, 1, 0, 0]
+            voxel_offset=[0, 0, 1, 0, 0],
         )
         viewer_context.layers[name + f"_{i}-{end_channel}"] = ng.ImageLayer(
             source=layer,
@@ -86,15 +87,17 @@ def visualize_segmentation(
             scales=[1, 1, 1, 1],
         ),
         volume_type="segmentation",
-        voxel_offset = [0, 1, 0, 0]
+        voxel_offset=[0, 1, 0, 0],
     )
-    
+
     viewer_context.layers.append(name=name, layer=layer)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("path_to_zarr",)
+    parser.add_argument(
+        "path_to_zarr",
+    )
     parser.add_argument("-g", "--groups", nargs="+")
     ngcli.add_server_arguments(parser)
     args = parser.parse_args()
@@ -110,12 +113,8 @@ if __name__ == "__main__":
         print(data.shape)
         if group == "mask":
             with viewer.txn() as s:
-                visualize_segmentation(
-                    s,
-                    data,
-                    group
-                )
-        elif group in ["gt_affs", "affs_weights", "pred_affs"] :
+                visualize_segmentation(s, data, group)
+        elif group in ["gt_affs", "affs_weights", "pred_affs"]:
             affs_y = data[0]
             affs_x = data[1]
             with viewer.txn() as s:
@@ -139,11 +138,7 @@ if __name__ == "__main__":
                 )
         elif group == "phase":
             with viewer.txn() as s:
-                visualize_image(
-                    s,
-                    data,
-                    group
-                )
+                visualize_image(s, data, group)
         else:
             raise ValueError(f"Couldn't visualize group {group}")
     url = str(viewer)

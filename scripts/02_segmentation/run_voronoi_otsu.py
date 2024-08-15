@@ -85,10 +85,12 @@ if __name__ == "__main__":
         result_name = args.result_name
 
     if args.cluster:
-        if args.data_base_path.startswith('/Volumes'):
-            args.data_base_path = args.data_base_path.replace('/Volumes', '/nrs')
-        if args.segmentation_base_path.startswith('/Volumes'):
-            args.segmentation_base_path = args.segmentation_base_path.replace('/Volumes', '/nrs')
+        if args.data_base_path.startswith("/Volumes"):
+            args.data_base_path = args.data_base_path.replace("/Volumes", "/nrs")
+        if args.segmentation_base_path.startswith("/Volumes"):
+            args.segmentation_base_path = args.segmentation_base_path.replace(
+                "/Volumes", "/nrs"
+            )
     base_path = Path(args.data_base_path)
     if not args.dataset_name:
         datasets = [s.name for s in base_path.iterdir() if s.is_dir()]
