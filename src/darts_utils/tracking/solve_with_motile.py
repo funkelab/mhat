@@ -1,4 +1,5 @@
 import motile
+import motile.variables
 from motile_toolbox.candidate_graph import graph_to_nx
 
 

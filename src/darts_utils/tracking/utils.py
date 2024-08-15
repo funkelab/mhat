@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from csv import DictReader
 from itertools import combinations
 from typing import Any, Iterable
 
@@ -9,7 +8,6 @@ import networkx as nx
 import numpy as np
 import scipy
 import skimage
-import zarr
 
 
 def nodes_from_segmentation(
@@ -45,34 +43,6 @@ def nodes_from_segmentation(
             cand_graph.add_node(node_id, **attrs)
 
     return cand_graph
-
-
-def read_gt_tracks(mask_zarr, tracks_file) -> nx.DiGraph:
-    """Get the ground truth tracks as a networkx graph
-
-    Args:
-        mask_zarr (str | Path): Path to the zarr containing the ground truth mask
-        tracks_file (str | Path): path to csv containing ground truth links
-
-    Returns:
-        nx.DiGraph: _description_
-    """
-    data_root = zarr.open(mask_zarr)
-    gt_seg = data_root["mask"][:]
-    gt_tracks = nodes_from_segmentation(gt_seg)
-
-    with open(tracks_file) as f:
-        reader = DictReader(f)
-        for row in reader:
-            i_d = int(float(row["id"]))
-            assert i_d in gt_tracks.nodes, f"node {i_d} not in graph"
-            parent_id = int(float(row["parent_id"]))
-            if parent_id != -1:
-                assert (
-                    parent_id in gt_tracks.nodes
-                ), f"parent id {parent_id} not in graph"
-                gt_tracks.add_edge(parent_id, i_d)
-    return gt_tracks
 
 
 def _compute_node_frame_dict(cand_graph: nx.DiGraph) -> dict[int, list[Any]]:
@@ -224,23 +194,6 @@ def add_area_diff_attr(cand_graph: motile.TrackGraph):
 
         area_diff = np.abs(area_u - area_v)
         cand_graph.edges[edge]["area_diff"] = area_diff
-
-
-def load_prediction(csv_path):
-    with open(csv_path) as f:
-        reader = DictReader(f)
-        graph = nx.DiGraph()
-        for row in reader:
-            node_id = int(float(row["id"]))
-            attrs = {
-                "time": int(float(row["time"])),
-                "pos": [int(float(row["x"])), int(float(row["y"]))],
-            }
-            parent_id = int(float(row["parent_id"]))
-            graph.add_node(node_id, **attrs)
-            if parent_id != -1:
-                graph.add_edge(parent_id, node_id)
-    return graph
 
 
 def add_division_hyperedges(candidate_graph: nx.DiGraph) -> nx.DiGraph:

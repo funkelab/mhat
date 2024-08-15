@@ -4,12 +4,12 @@ import motile_plugin
 import napari
 import numpy as np
 import zarr
+from motile_toolbox.visualization.napari_utils import assign_tracklet_ids
+
+from darts_utils.tracking.tracks_io import load_tracks_from_csv, read_gt_tracks
 from darts_utils.tracking.utils import (
-    load_prediction,
-    read_gt_tracks,
     relabel_segmentation,
 )
-from motile_toolbox.visualization.napari_utils import assign_tracklet_ids
 
 
 def crop_tracks(tracks, start_frame, end_frame, frame_attr="time"):
@@ -48,7 +48,7 @@ def view_run(
     pred_seg = zarr_root[pred_seg_group][start_frame:end_frame]
     fragments = zarr_root[input_seg_group][start_frame:end_frame]
 
-    pred_tracks = load_prediction(data_path / pred_tracks_name)
+    pred_tracks = load_tracks_from_csv(data_path / pred_tracks_name)
     pred_tracks = crop_tracks(pred_tracks, start_frame, end_frame)
     assign_tracklet_ids(pred_tracks)
 
@@ -74,5 +74,5 @@ def view_run(
 
     widget = motile_plugin.widgets.TreeWidget(viewer)
     viewer.window.add_dock_widget(widget, name="Lineage View", area="bottom")
-    widget.view_controller.update_napari_layers(run)
+    widget.view_controller.update_napari_layers(run, pos_attr=("x", "y"))
     napari.run()
