@@ -1,5 +1,4 @@
 import argparse
-import csv
 import datetime
 from pathlib import Path
 
@@ -8,28 +7,7 @@ import numpy as np
 import toml
 import zarr
 from darts_utils.tracking import create_multihypo_graph, solve_with_motile, utils
-
-
-def save_solution_graph(solution_graph, csv_path):
-    with open(csv_path, "w") as f:
-        writer = csv.DictWriter(f, fieldnames=["time", "x", "y", "id", "parent_id"])
-        writer.writeheader()
-        for node, data in solution_graph.nodes(data=True):
-            parents = list(solution_graph.predecessors(node))
-            if len(parents) == 1:
-                parent_id = parents[0]
-            elif len(parents) == 0:
-                parent_id = -1
-            else:
-                raise ValueError(f"Node {node} has too many parents! {parents}")
-            row = {
-                "time": data["time"],
-                "x": data["x"],
-                "y": data["y"],
-                "id": node,
-                "parent_id": parent_id,
-            }
-            writer.writerow(row)
+from darts_utils.tracking.tracks_io import save_tracks_to_csv
 
 
 def get_solution_seg(fragments, merge_history, solution_graph):
@@ -67,12 +45,9 @@ def get_solution_seg(fragments, merge_history, solution_graph):
     return solution_seg
 
 
-def run_tracking(config, video_base_path: Path):
-    current_datetime = datetime.datetime.now()
-    datetime_str = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
-    print(datetime_str)
+def run_tracking(config, video_base_path: Path, exp_name):
     base_path = Path(video_base_path)
-    exp_path = base_path / datetime_str
+    exp_path = base_path / exp_name
     exp_path.mkdir()
     zarr_path = base_path / "data.zarr"
     merge_history_csv_path = base_path / "merge_history.csv"
@@ -83,7 +58,7 @@ def run_tracking(config, video_base_path: Path):
         toml.dump(config, config_file)
 
     seg_group = "fragments"
-    output_seg_group = f"{datetime_str}_pred_mask"
+    output_seg_group = f"{exp_name}_pred_mask"
 
     max_edge_distance = config["max_edge_distance"]
 
@@ -115,7 +90,7 @@ def run_tracking(config, video_base_path: Path):
 
     solution_graph = solve_with_motile(config, track_graph, exclusion_sets)
 
-    save_solution_graph(solution_graph, output_filepath)
+    save_tracks_to_csv(solution_graph, output_filepath)
     solution_seg = get_solution_seg(fragments, merge_history, solution_graph)
     zarr_root[output_seg_group] = solution_seg
 
@@ -135,9 +110,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
     config = toml.load(args.config)
     data_dir = Path(args.data_dir)
+    current_datetime = datetime.datetime.now()
+    exp_name = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
+    print(exp_name)
     if args.all:
         for subdir in data_dir.iterdir():
             print(subdir.is_dir())
-            run_tracking(config, subdir)
+            run_tracking(config, subdir, exp_name)
     else:
-        run_tracking(config, data_dir)
+        run_tracking(config, data_dir, exp_name)
