@@ -1,3 +1,9 @@
+# IO
+input_base_dir = "/Volumes/funke/data/mother_machine/synthetic_data/"
+output_base_dir = "/Volumes/funke/projects/darts/experiments/results/"
+dataset = "validation1"
+
+# ILP params
 drift = 10
 drift_weight = 1.0
 drift_constant = -10.0
@@ -10,6 +16,7 @@ adhesion_constant = 0
 appear_constant = 200.0
 disappear_constant = 200.0
 
+# cand graph creation params
 min_merge_score = 0.0
 max_merge_score = 0.5
 max_edge_distance = 40

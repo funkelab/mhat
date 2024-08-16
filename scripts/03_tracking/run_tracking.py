@@ -6,6 +6,7 @@ import motile
 import numpy as np
 import toml
 import zarr
+from darts_utils.evaluation.eval_io import check_video_dir
 from darts_utils.tracking import create_multihypo_graph, solve_with_motile, utils
 from darts_utils.tracking.tracks_io import save_tracks_to_csv
 
@@ -45,12 +46,12 @@ def get_solution_seg(fragments, merge_history, solution_graph):
     return solution_seg
 
 
-def run_tracking(config, video_base_path: Path, exp_name):
-    base_path = Path(video_base_path)
-    exp_path = base_path / exp_name
+def run_tracking(config, input_video_path: Path, output_video_path: Path, exp_name):
+    exp_path = output_video_path / exp_name
     exp_path.mkdir()
-    zarr_path = base_path / "data.zarr"
-    merge_history_csv_path = base_path / "merge_history.csv"
+    input_zarr_path = input_video_path / "data.zarr"
+    output_zarr_path = output_video_path / "data.zarr"
+    merge_history_csv_path = input_video_path / "merge_history.csv"
     config_filepath = exp_path / "config.toml"
     output_filepath = exp_path / "pred_tracks.csv"
 
@@ -62,8 +63,8 @@ def run_tracking(config, video_base_path: Path, exp_name):
 
     max_edge_distance = config["max_edge_distance"]
 
-    zarr_root = zarr.open(zarr_path)
-    fragments = zarr_root[seg_group][:]
+    input_zarr_root = zarr.open(input_zarr_path)
+    fragments = input_zarr_root[seg_group][:]
     max_node_id = np.max(fragments)
 
     merge_history = create_multihypo_graph.load_merge_history(merge_history_csv_path)
@@ -92,30 +93,36 @@ def run_tracking(config, video_base_path: Path, exp_name):
 
     save_tracks_to_csv(solution_graph, output_filepath)
     solution_seg = get_solution_seg(fragments, merge_history, solution_graph)
-    zarr_root[output_seg_group] = solution_seg
+    output_zarr_root = zarr.open(output_zarr_path)
+    output_zarr_root[output_seg_group] = solution_seg
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("config")
-    parser.add_argument(
-        "data_dir",
-        help="directory containing the data.zarr and other dataset specific files",
-    )
-    parser.add_argument(
-        "--all",
-        action="store_true",
-        help="Run on all subdirectories of the given directory",
-    )
     args = parser.parse_args()
     config = toml.load(args.config)
-    data_dir = Path(args.data_dir)
+
+    input_base_dir = Path(config["input_base_dir"])
+    output_base_dir = Path(config["output_base_dir"])
+    dataset: str = config["dataset"]
+    assert input_base_dir.is_dir()
+    assert output_base_dir.is_dir()
+
+    data_dir = input_base_dir / dataset
+    assert data_dir.is_dir()
+
     current_datetime = datetime.datetime.now()
     exp_name = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
+    config["exp_name"] = exp_name
     print(exp_name)
-    if args.all:
-        for subdir in data_dir.iterdir():
-            print(subdir.is_dir())
-            run_tracking(config, subdir, exp_name)
-    else:
-        run_tracking(config, data_dir, exp_name)
+
+    output_dataset_dir = output_base_dir / dataset
+
+    for video_dir in data_dir.iterdir():
+        if check_video_dir(video_dir):
+            vid_name = video_dir.stem
+            output_video_dir = output_dataset_dir / vid_name
+            output_video_dir.mkdir(exist_ok=True, parents=True)
+            print("Writing tracking output to ", output_video_dir)
+            run_tracking(config, video_dir, output_video_dir, exp_name)
