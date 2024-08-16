@@ -23,25 +23,42 @@ void main() {
         );
 }"""
 
+def get_coords(ndims, batch=False, time_offset = 0):
+    if ndims > 4:
+        raise ValueError(f"ndims < 4 expected, got {ndims}")
+    names=["c^", "t", "y", "x"][-ndims:]
+    units=["", "s", "nm", "nm"][-ndims:]
+    scales=[1, 1, 1, 1][-ndims:]
+    offset=[0, time_offset, 0, 0][-ndims:]
+    if batch:
+        names = ["b", *names]
+        units = ["", *units]
+        scales = [1, *scales]
+        offset = [0, *offset]
+    
+    return ng.CoordinateSpace(
+        names=names,
+        units=units,
+        scales=scales,
+    ), offset
+
 
 def visualize_lsds(
     viewer_context,
     data,
     name,
+    batch=False,
 ):
     shader = rgb_shader_code % (1.0, 0, 1, 2)
     for i in range(0, data.shape[1], 3):
         end_channel = min(i + 3, data.shape[1])
         current_channels = data[:, i:end_channel]
+        coords, offset = get_coords(4, batch=batch, time_offset=1) 
         layer = ng.LocalVolume(
             data=current_channels,
-            dimensions=ng.CoordinateSpace(
-                names=["b", "c^", "t", "y", "x"],
-                units=["", "", "s", "nm", "nm"],
-                scales=[1, 1, 1, 1, 1],
-            ),
+            dimensions=get_coords(4, batch=batch),
             volume_type="image",
-            voxel_offset=[0, 0, 1, 0, 0],
+            voxel_offset=offset,
         )
         viewer_context.layers[name + f"_{i}-{end_channel}"] = ng.ImageLayer(
             source=layer,
@@ -53,15 +70,14 @@ def visualize_image(
     viewer_context,
     data,
     name,
+    batch=False,
 ):
+    coords, offset = get_coords(3, batch=batch, time_offset=0)
     layer = ng.LocalVolume(
         data=data,
-        dimensions=ng.CoordinateSpace(
-            names=["b", "t", "y", "x"],
-            units=["", "s", "nm", "nm"],
-            scales=[1, 1, 1, 1],
-        ),
+        dimensions=coords,
         volume_type="image",
+        voxel_offset=offset
     )
     # compute shader normalization ranges from one time point
     target_time = data.shape[0] // 2
@@ -72,22 +88,35 @@ def visualize_image(
         shader_controls={"normalized": {"range": [shader_min, shader_max]}},
     )
 
+def visualize_affinities(
+    viewer_context,
+    data,
+    name,
+    batch=False,
+):
+    coords, offset = get_coords(3, batch=batch, time_offset=1)
+    layer = ng.LocalVolume(
+        data=data,
+        dimensions=coords,
+        volume_type="image",
+        voxel_offset=offset,
+    )
+    viewer_context.layers[name] = ng.ImageLayer(source=layer)
+
 
 def visualize_segmentation(
     viewer_context,
     data,
     name,
+    batch=False,
 ):
+    coords, offset = get_coords(3, batch=batch, time_offset=1)
     data = data.astype(np.uint64)
     layer = ng.LocalVolume(
         data=data,
-        dimensions=ng.CoordinateSpace(
-            names=["b", "t", "y", "x"],
-            units=["", "s", "nm", "nm"],
-            scales=[1, 1, 1, 1],
-        ),
+        dimensions=coords,
         volume_type="segmentation",
-        voxel_offset=[0, 1, 0, 0],
+        voxel_offset=offset,
     )
 
     viewer_context.layers.append(name=name, layer=layer)
@@ -99,6 +128,7 @@ if __name__ == "__main__":
         "path_to_zarr",
     )
     parser.add_argument("-g", "--groups", nargs="+")
+    parser.add_argument("-f", "--flatten", action="store_true")
     ngcli.add_server_arguments(parser)
     args = parser.parse_args()
     ng.set_server_bind_address(bind_address="0.0.0.0")
@@ -111,22 +141,37 @@ if __name__ == "__main__":
         print(root.keys())
         data = root[group]
         print(data.shape)
+        if args.flatten:
+            batch = data.shape[0]
+            x = data.shape[-1]
+            new_shape = (*data.shape[1:-1], x * batch)
+            print(new_shape)
+            data = np.moveaxis(data, 0, -2).reshape(new_shape)
+            batch = False
+        else:
+            batch = True
         if group == "mask":
             with viewer.txn() as s:
-                visualize_segmentation(s, data, group)
+                visualize_segmentation(s, data, group, batch=batch)
         elif group in ["gt_affs", "affs_weights", "pred_affs"]:
-            affs_y = data[0]
-            affs_x = data[1]
+            if batch:
+                affs_y = data[:,0]
+                affs_x = data[:,1]
+            else:
+                affs_y = data[0]
+                affs_x = data[1]
             with viewer.txn() as s:
-                visualize_image(
+                visualize_affinities(
                     s,
                     affs_x,
                     group + "_x",
+                    batch=batch,
                 )
-                visualize_image(
+                visualize_affinities(
                     s,
                     affs_y,
                     group + "_y",
+                    batch=batch,
                 )
 
         elif group in ["gt_lsds", "pred_lsds"]:
@@ -135,10 +180,11 @@ if __name__ == "__main__":
                     s,
                     data,
                     group,
+                    batch=batch,
                 )
         elif group == "phase":
             with viewer.txn() as s:
-                visualize_image(s, data, group)
+                visualize_image(s, data, group, batch=batch)
         else:
             raise ValueError(f"Couldn't visualize group {group}")
     url = str(viewer)
