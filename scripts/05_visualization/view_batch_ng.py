@@ -36,11 +36,12 @@ def visualize_lsds(
         layer = ng.LocalVolume(
             data=current_channels,
             dimensions=ng.CoordinateSpace(
-                names=["c^", "t", "y", "x"],
-                units=["", "s", "nm", "nm"],
-                scales=[1, 1, 1, 1],
+                names=["b", "c^", "t", "y", "x"],
+                units=["", "", "s", "nm", "nm"],
+                scales=[1, 1, 1, 1, 1],
             ),
             volume_type="image",
+            voxel_offset=[0, 0, 1, 0, 0],
         )
         viewer_context.layers[name + f"_{i}-{end_channel}"] = ng.ImageLayer(
             source=layer,
@@ -56,9 +57,9 @@ def visualize_image(
     layer = ng.LocalVolume(
         data=data,
         dimensions=ng.CoordinateSpace(
-            names=["t", "y", "x"],
-            units=["s", "nm", "nm"],
-            scales=[1, 1, 1],
+            names=["b", "t", "y", "x"],
+            units=["", "s", "nm", "nm"],
+            scales=[1, 1, 1, 1],
         ),
         volume_type="image",
     )
@@ -81,11 +82,12 @@ def visualize_segmentation(
     layer = ng.LocalVolume(
         data=data,
         dimensions=ng.CoordinateSpace(
-            names=["t", "y", "x"],
-            units=["s", "nm", "nm"],
-            scales=[1, 1, 1],
+            names=["b", "t", "y", "x"],
+            units=["", "s", "nm", "nm"],
+            scales=[1, 1, 1, 1],
         ),
         volume_type="segmentation",
+        voxel_offset=[0, 1, 0, 0],
     )
 
     viewer_context.layers.append(name=name, layer=layer)
@@ -111,13 +113,11 @@ if __name__ == "__main__":
         print(data.shape)
         if group == "mask":
             with viewer.txn() as s:
-                print(s)
                 visualize_segmentation(s, data, group)
         elif group in ["gt_affs", "affs_weights", "pred_affs"]:
             affs_y = data[0]
             affs_x = data[1]
             with viewer.txn() as s:
-                print(s)
                 visualize_image(
                     s,
                     affs_x,
@@ -138,7 +138,6 @@ if __name__ == "__main__":
                 )
         elif group == "phase":
             with viewer.txn() as s:
-                print(s)
                 visualize_image(s, data, group)
         else:
             raise ValueError(f"Couldn't visualize group {group}")
