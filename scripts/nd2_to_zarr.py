@@ -20,13 +20,11 @@ with nd2.ND2File(infile) as myfile:
     channels_dict = {"channels": [channel.model_dump_json() for channel in channels]}
     root.attrs.update(channels_dict)
 
-    data = myfile.to_dask().rechunk(chunks=(1, 1, 1, 2960, 5056))
+    data = myfile.to_dask().rechunk(chunks=(1, 1, 1, 740, 1264))
     print(data.chunksize)
 
     num_fovs = myfile.shape[1] 
     for fov in range(num_fovs):
-        if fov <= 5:
-            continue
         fov_data = data[:, fov]
         fov_group = f"{fov}/{outgroup}"
         print(fov_group)
