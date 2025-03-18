@@ -6,8 +6,8 @@ import motile_plugin
 import napari
 import numpy as np
 import zarr
-from darts_utils.tracking.tracks_io import load_tracks_from_csv, read_gt_tracks
-from darts_utils.tracking.utils import (
+from mhat.tracking.tracks_io import load_tracks_from_csv, read_gt_tracks
+from mhat.tracking.utils import (
     relabel_segmentation,
 )
 from motile_toolbox.visualization.napari_utils import assign_tracklet_ids

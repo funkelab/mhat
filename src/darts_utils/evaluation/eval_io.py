@@ -12,12 +12,15 @@ def check_video_dir(dir: Path) -> bool:
     return vid_re.match(stem) is not None
 
 
-def load_segmentation_results(ds_results_dir: Path) -> pd.DataFrame | None:
+def load_segmentation_results(
+    ds_results_dir: Path, exp_name: str
+) -> pd.DataFrame | None:
     per_frame_seg_results = None
     for video_dir in ds_results_dir.iterdir():
         if check_video_dir(video_dir):
             vid_name = video_dir.stem
-            vid_df = pd.read_csv(video_dir / "segmentation_results.csv")
+            vid_df = pd.read_csv(video_dir / exp_name / "segmentation_metrics.csv")
+            vid_df.drop(vid_df.tail(1).index, inplace=True)  # drop last row
             vid_df["video"] = vid_name
             if per_frame_seg_results is None:
                 per_frame_seg_results = vid_df
@@ -26,12 +29,12 @@ def load_segmentation_results(ds_results_dir: Path) -> pd.DataFrame | None:
     return per_frame_seg_results
 
 
-def load_tracking_results(ds_results_dir: Path) -> pd.DataFrame:
+def load_tracking_results(ds_results_dir: Path, exp_name: str) -> pd.DataFrame:
     results = {}
     for video_dir in ds_results_dir.iterdir():
         if check_video_dir(video_dir):
             vid_name = video_dir.stem
-            res_file = video_dir / "tracking_metrics.json"
+            res_file = video_dir / exp_name / "tracking_metrics.json"
             assert res_file.is_file()
             with open(res_file) as f:
                 tracking_results = json.load(f)
@@ -41,7 +44,9 @@ def load_tracking_results(ds_results_dir: Path) -> pd.DataFrame:
 
 
 def convert_tracking_results_to_df(tracking_results) -> pd.DataFrame:
-    ctc_columns = ["fp_nodes", "fn_nodes", "fp_edges", "fn_edges", "TRA"]
+    for vid, result in tracking_results.items():
+        print(result)
+    ctc_columns = ["fp_edges", "fn_edges", "TRA"]
     div_columns = [
         "True Positive Divisions",
         "False Positive Divisions",
@@ -52,6 +57,12 @@ def convert_tracking_results_to_df(tracking_results) -> pd.DataFrame:
 
     tracking_results_filtered = {}
     tracking_results_filtered["video"] = list(tracking_results.keys())
+
+    gt_edges = [
+        tracking_results[video][0]["gt_edges"]
+        for video in tracking_results_filtered["video"]
+    ]
+    tracking_results_filtered["gt_edges"] = gt_edges
 
     for column in ctc_columns:
         vals = [results[0]["results"][column] for results in tracking_results.values()]

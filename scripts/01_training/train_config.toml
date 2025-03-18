@@ -7,7 +7,7 @@ num_workers = 10
 # gunpowder nodes
 noise_max = 0.1
 lsd_sigma = 20
-snapshot_dir = '/nrs/funke/data/darts/synthetic_data/snapshots_folder/run3'
+snapshot_dir = '/nrs/funke/data/mhat/synthetic_data/snapshots_folder/run3'
 
 # data
 input_dir = "/nrs/funke/data/mother_machine/synthetic_data/dataset1/"

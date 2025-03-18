@@ -1,15 +1,17 @@
 from pathlib import Path
 
 import motile_plugin
+import motile_plugin.data_model
 import napari
 import numpy as np
 import zarr
-from motile_toolbox.visualization.napari_utils import assign_tracklet_ids
-
-from darts_utils.tracking.tracks_io import load_tracks_from_csv, read_gt_tracks
-from darts_utils.tracking.utils import (
+from mhat.tracking.tracks_io import load_tracks_from_csv, read_gt_tracks
+from mhat.tracking.utils import (
     relabel_segmentation,
 )
+from motile_plugin.data_views.menus.multi_widget import MultiWidget
+from motile_plugin.data_views.views_coordinator import TracksViewer
+from motile_toolbox.visualization.napari_utils import assign_tracklet_ids
 
 
 def crop_tracks(tracks, start_frame, end_frame, frame_attr="time"):
@@ -32,7 +34,12 @@ def crop_tracks(tracks, start_frame, end_frame, frame_attr="time"):
 
 
 def view_run(
-    data_path: Path, experiment: str, run_name: str, start_frame=None, end_frame=None
+    gt_data_path: Path,
+    pred_data_path,
+    experiment: str,
+    run_name: str,
+    start_frame=None,
+    end_frame=None,
 ):
     zarr_name = "data.zarr"
     raw_group = "phase"
@@ -42,37 +49,39 @@ def view_run(
 
     gt_tracks_name = "gt_tracks.csv"
     pred_tracks_name = f"{experiment}/pred_tracks.csv"
+    gt_zarr_root = zarr.open(gt_data_path / zarr_name)
+    pred_zarr_root = zarr.open(pred_data_path / zarr_name)
+    raw_data = gt_zarr_root[raw_group][start_frame:end_frame]
+    pred_seg = pred_zarr_root[pred_seg_group][start_frame:end_frame]
+    fragments = gt_zarr_root[input_seg_group][start_frame:end_frame]
 
-    zarr_root = zarr.open(data_path / zarr_name)
-    raw_data = zarr_root[raw_group][start_frame:end_frame]
-    pred_seg = zarr_root[pred_seg_group][start_frame:end_frame]
-    fragments = zarr_root[input_seg_group][start_frame:end_frame]
-
-    pred_tracks = load_tracks_from_csv(data_path / pred_tracks_name)
+    pred_tracks = load_tracks_from_csv(pred_data_path / pred_tracks_name)
     pred_tracks = crop_tracks(pred_tracks, start_frame, end_frame)
     assign_tracklet_ids(pred_tracks)
 
     pred_seg = relabel_segmentation(pred_tracks, pred_seg)
 
-    run = motile_plugin.backend.motile_run.MotileRun(
-        run_name=run_name,
-        solver_params=None,
-        output_segmentation=np.expand_dims(pred_seg, axis=1),
-        tracks=pred_tracks,
+    run = motile_plugin.data_model.Tracks(
+        segmentation=np.expand_dims(pred_seg, axis=1),
+        graph=pred_tracks,
+        pos_attr="pos",
     )
 
     viewer = napari.Viewer()
     viewer.add_image(raw_data, name="phase")
     viewer.add_labels(fragments, name="fragments")
 
-    if gt_seg_group in zarr_root:
-        gt_seg = zarr_root[gt_seg_group][start_frame:end_frame]
-        gt_tracks = read_gt_tracks(data_path / zarr_name, data_path / gt_tracks_name)
+    if gt_seg_group in gt_zarr_root:
+        gt_seg = gt_zarr_root[gt_seg_group][start_frame:end_frame]
+        gt_tracks = read_gt_tracks(
+            gt_data_path / zarr_name, gt_data_path / gt_tracks_name
+        )
         gt_tracks = crop_tracks(gt_tracks, start_frame, end_frame)
         assign_tracklet_ids(gt_tracks)
         viewer.add_labels(gt_seg, name="gt_seg")
 
-    widget = motile_plugin.widgets.TreeWidget(viewer)
-    viewer.window.add_dock_widget(widget, name="Lineage View", area="bottom")
-    widget.view_controller.update_napari_layers(run, pos_attr=("x", "y"))
+    widget = MultiWidget(viewer)
+    viewer.window.add_dock_widget(widget, name="Motile Widget")
+    tracks_viewer = TracksViewer.get_instance(viewer)
+    tracks_viewer.tracks_list.add_tracks(run, name=experiment)
     napari.run()

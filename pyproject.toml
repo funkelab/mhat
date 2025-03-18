@@ -3,8 +3,8 @@ build-backend = "setuptools.build_meta"
 requires = ["setuptools", "wheel"]
 
 [project]
-name = "darts_utils"
-description = "Experiments and scripts for DARTS project: mother machine cell segmentation and tracking."
+name = "mhat"
+description = "Experiments and scripts for mhat: multi-hypothesis segmentation and tracking."
 readme = "README.md"
 requires-python = ">=3.7"
 classifiers = [
@@ -41,8 +41,8 @@ dev = [
 ]
 
 [project.urls]
-homepage = "https://github.com/funkelab/darts_experiments"
-repository = "https://github.com/funkelab/darts_experiments"
+homepage = "https://github.com/funkelab/mhat"
+repository = "https://github.com/funkelab/mhat"
 
 # https://github.com/charliermarsh/ruff
 [tool.ruff]

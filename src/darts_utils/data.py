@@ -6,7 +6,7 @@ import numpy as np
 import zarr
 
 
-class DartsZarr:
+class DataZarr:
     def __init__(
         self,
         base_path: str | Path,
@@ -16,9 +16,9 @@ class DartsZarr:
         store_type="nested",
         zarr_base_group: str = "",
     ):
-        """A wrapper class for zarrs that maintains DARTS data structure, with fovs and
-        channels stored in separate groups. Can be used to read existing data or
-        create a new DARTS structured zarr depending on the mode.
+        """A wrapper class for zarrs that maintains standard imaging data structure,
+        with fovs and channels stored in separate groups. Can be used to read existing
+        data or create a new structured zarr depending on the mode.
 
         Args:
             base_path (str | Path): Path to directory containing all datasets
@@ -67,7 +67,7 @@ class DartsZarr:
             list[int]: A list of all fovs present in zarr.
         """
         root = zarr.open_group(self.store, mode=self.mode, path=self.zarr_base_group)
-        return [DartsZarr._fov_from_key(k) for k in root.group_keys()]
+        return [DataZarr._fov_from_key(k) for k in root.group_keys()]
 
     def get_channels(self, fov: int) -> list[str]:
         """Get a list of all channels for that fov in the zarr
@@ -80,7 +80,7 @@ class DartsZarr:
         """
         fov_group_path = self._get_fov_group_path(fov)
         fov_group = zarr.open_group(self.store, mode=self.mode, path=fov_group_path)
-        return [DartsZarr._channel_from_key(k) for k in fov_group.array_keys()]
+        return [DataZarr._channel_from_key(k) for k in fov_group.array_keys()]
 
     def get_data(
         self,
@@ -90,7 +90,7 @@ class DartsZarr:
         dtype: Optional[str | np.dtype] = None,
     ) -> zarr.array:
         """Get the zarr array for the given fov and channel, with behavior determined
-        by the mode of the DartsZarr (e.g. overwrite if 'w', fail if not present
+        by the mode of the DataZarr (e.g. overwrite if 'w', fail if not present
         if 'r').
 
         Args:
@@ -121,7 +121,7 @@ class DartsZarr:
         Returns:
             str: Path within zarr to fov group
         """
-        fov_key = DartsZarr._fov_key(fov)
+        fov_key = DataZarr._fov_key(fov)
         if self.zarr_base_group:
             return self.zarr_base_group + "/" + fov_key
         else:
@@ -137,18 +137,18 @@ class DartsZarr:
         Returns:
             str: Path within zarr to channel array of the given fov
         """
-        channel_key = DartsZarr._channel_key(channel)
+        channel_key = DataZarr._channel_key(channel)
         return self._get_fov_group_path(fov) + "/" + channel_key
 
     @staticmethod
     def _fov_key(fov: int) -> str:
-        """Static method to turn an int fov into a string key in DARTS format.
+        """Static method to turn an int fov into a string key in imaging data format.
 
         Args:
             fov (int): Field of view
 
         Returns:
-            str: Key used in DARTS format for the field of view, e.g. `fov=1`.
+            str: Key used in imaging data format for the field of view, e.g. `fov=1`.
         """
         return f"fov={fov}"
 
@@ -156,7 +156,7 @@ class DartsZarr:
     def _fov_from_key(fov_key: str) -> int:
         """Static method to extract the fov int from the fov_key string.
         Args:
-            fov_key (str): Field of view key in DARTS format, e.g. `fov=1`
+            fov_key (str): Field of view key in imaging data format, e.g. `fov=1`
 
         Returns:
             int: Fov int extracted from fov key
@@ -165,7 +165,7 @@ class DartsZarr:
 
     @staticmethod
     def _channel_key(channel: str) -> str:
-        """Static method to get the DARTS formatted channel_key string from the
+        """Static method to get the imaging data formatted channel_key string from the
         channel name.
         For example:
             `YFP` -> `channel=YFP`
@@ -174,7 +174,7 @@ class DartsZarr:
             channel (str): Channel name
 
         Returns:
-            str: Channel key in DARTS format `channel=<name>`
+            str: Channel key in imaging data format `channel=<name>`
         """
         return f"channel={channel}"
 
@@ -192,8 +192,8 @@ class DartsZarr:
         return channel_key.split("=")[1]
 
 
-class RawDataZarr(DartsZarr):
-    """A DARTS zarr that assumes the zarr name is "raw.zarr" and the base group is
+class RawDataZarr(DataZarr):
+    """A imaging data zarr that assumes the zarr name is "raw.zarr" and the base group is
     empty
     """
 
@@ -214,8 +214,8 @@ class RawDataZarr(DartsZarr):
         )
 
 
-class SegmentationZarr(DartsZarr):
-    """A DARTS zarr that assumes the zarr name is "segmentation.zarr" and the base
+class SegmentationZarr(DataZarr):
+    """A imaging data zarr that assumes the zarr name is "segmentation.zarr" and the base
     group corresponds to a result name that must be passed to constructor (but can
     be changed later).
     """
@@ -293,7 +293,7 @@ class SegmentationZarr(DartsZarr):
 
 
 def add_data_args(
-    parser: argparse.ArgumentParser, base_path_default="/Volumes/funke/data/darts"
+    parser: argparse.ArgumentParser, base_path_default="/Volumes/funke/data/mhat"
 ):
     group = parser.add_argument_group("Data arguments")
     group.add_argument("-d", "--dataset_name", help="Dataset: name")
@@ -316,7 +316,7 @@ def add_data_args(
 
 def add_segmentation_args(
     parser: argparse.ArgumentParser,
-    seg_path_default="/Volumes/funke/projects/darts/experiments/segmentation",
+    seg_path_default="/Volumes/funke/projects/mhat/experiments/segmentation",
 ):
     group = parser.add_argument_group(
         "Segmentation zarr arguments (use data args for general dataset identificaton)"

@@ -6,7 +6,7 @@ import gunpowder as gp
 import numpy as np
 import waterz
 import zarr
-from darts_utils.segmentation import MtlsdModel
+from mhat.segmentation import MtlsdModel
 from scipy.ndimage import label
 from scipy.ndimage.filters import maximum_filter
 from scipy.ndimage.morphology import distance_transform_edt

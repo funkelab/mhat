@@ -4,13 +4,13 @@ from pathlib import Path
 
 import toml
 import zarr
-from darts_utils.evaluation.eval_io import check_video_dir
-from darts_utils.evaluation.evaluate_segmentation import (
+from mhat.evaluation.eval_io import check_video_dir
+from mhat.evaluation.evaluate_segmentation import (
     evaluate_segmentation,
     save_seg_results,
 )
-from darts_utils.evaluation.evaluate_tracking import evaluate_tracking
-from darts_utils.tracking.tracks_io import load_tracks_from_csv, read_gt_tracks
+from mhat.evaluation.evaluate_tracking import evaluate_tracking
+from mhat.tracking.tracks_io import load_tracks_from_csv, read_gt_tracks
 
 
 def run_evaluation(config, gt_data_dir: Path, pred_data_dir: Path):

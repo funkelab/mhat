@@ -100,7 +100,16 @@ def evaluate_segmentation(
 
         # sanity check
         assert len(gt_tps) == len(pred_tps)
-
+        # correct items, counting each merge or split as one correct match
+        accuracy_numerator = len(gt_tps) + len(pred_merges) + len(gt_splits)
+        # total items, counting each merge or split as multiple
+        accuracy_denominator = (
+            len(gt_tps)
+            + len(gt_merges)
+            + len(pred_splits)
+            + len(pred_fps)
+            + len(gt_fns)
+        )
         results.append(
             {
                 "frame": t,
@@ -110,6 +119,7 @@ def evaluate_segmentation(
                 "merge": len(gt_merges),  # number of GT items merged
                 "split": len(gt_splits),  # number of GT items split
                 "GT": len(gt_ids),
+                "accuracy": accuracy_numerator / accuracy_denominator,
             }
         )
 
@@ -117,7 +127,7 @@ def evaluate_segmentation(
 
 
 def save_seg_results(seg_results, outfile):
-    fieldnames = ["frame", "TP", "FP", "FN", "merge", "split", "GT"]
+    fieldnames = ["frame", "TP", "FP", "FN", "merge", "split", "GT", "accuracy"]
     sum_row = {"frame": "all"}
     for field in fieldnames:
         sum_row[field] = 0

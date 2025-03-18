@@ -4,7 +4,7 @@ from pathlib import Path
 
 import neuroglancer as ng
 import neuroglancer.cli as ngcli
-from darts_utils.data import (
+from mhat.data import (
     RawDataZarr,
     SegmentationZarr,
     add_data_args,
@@ -20,14 +20,14 @@ logging.basicConfig(
 
 def visualize_data(
     viewer_context,
-    darts_zarr: RawDataZarr,
+    mhat_zarr: RawDataZarr,
     fov: int,
 ):
-    channels = darts_zarr.get_channels(fov)
+    channels = mhat_zarr.get_channels(fov)
     print(f"visualizing data for channels {channels}")
 
     for channel in channels:
-        data = darts_zarr.get_data(fov=fov, channel=channel)
+        data = mhat_zarr.get_data(fov=fov, channel=channel)
         layer = ng.LocalVolume(
             data=data,
             dimensions=ng.CoordinateSpace(
@@ -39,9 +39,9 @@ def visualize_data(
         )
         name = "_".join(
             (
-                darts_zarr.dataset_name,
-                darts_zarr._fov_key(fov),
-                darts_zarr._channel_key(channel),
+                mhat_zarr.dataset_name,
+                mhat_zarr._fov_key(fov),
+                mhat_zarr._channel_key(channel),
             )
         )
         # compute shader normalization ranges from one time point

@@ -48,7 +48,7 @@ def plot_hist():
 
     for file_num in range(1, 101):
         base_path = Path(
-            f"/nrs/funke/data/darts/synthetic_data/test1/{file_num}/data.zarr"
+            f"/nrs/funke/data/mhat/synthetic_data/test1/{file_num}/data.zarr"
         )
 
         csv_file = base_path.parent / "new_evaluation.csv"
@@ -86,7 +86,7 @@ def plot_length_f1():
 
     for file_num in range(1, 101):
         base_path = Path(
-            f"/nrs/funke/data/darts/synthetic_data/test1/{file_num}/data.zarr"
+            f"/nrs/funke/data/mhat/synthetic_data/test1/{file_num}/data.zarr"
         )
         zarr_group = zarr.open_group(base_path, mode="r")
         print(zarr_group.attrs)
@@ -110,7 +110,7 @@ def total_info():
 
     for file_num in range(1, 101):
         base_path = Path(
-            f"/nrs/funke/data/darts/synthetic_data/test1/{file_num}/data.zarr"
+            f"/nrs/funke/data/mhat/synthetic_data/test1/{file_num}/data.zarr"
         )
 
         csv_file = base_path.parent / "new_evaluation.csv"
@@ -146,7 +146,7 @@ def total_info():
 
 # %%
 if __name__ == "__main__":
-    base_path = Path("/nrs/funke/data/darts/synthetic_data/test1")
+    base_path = Path("/nrs/funke/data/mhat/synthetic_data/test1")
     num_directories = 100
     directories = [base_path / str(i) for i in range(1, num_directories + 1)]
     plot_scatter(directories)

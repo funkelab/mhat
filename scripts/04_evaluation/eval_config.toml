@@ -1,8 +1,8 @@
 # IO
 input_base_dir = "/Volumes/funke/data/mother_machine/synthetic_data/"
-output_base_dir = "/Volumes/funke/projects/darts/experiments/results/"
-dataset = "validation1"
-exp_name = "2024-08-15_22-49-22"
+output_base_dir = "/Volumes/funke/projects/mhat/experiments/results/"
+dataset = "test1"
+exp_name = "2024-08-15_23-37-21"
 
 # Eval settings
 iou_threshold = 0.25

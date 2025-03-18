@@ -6,9 +6,9 @@ import motile
 import numpy as np
 import toml
 import zarr
-from darts_utils.evaluation.eval_io import check_video_dir
-from darts_utils.tracking import create_multihypo_graph, solve_with_motile, utils
-from darts_utils.tracking.tracks_io import save_tracks_to_csv
+from mhat.evaluation.eval_io import check_video_dir
+from mhat.tracking import create_multihypo_graph, solve_with_motile, utils
+from mhat.tracking.tracks_io import save_tracks_to_csv
 
 
 def get_solution_seg(fragments, merge_history, solution_graph):

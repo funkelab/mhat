@@ -1,15 +1,15 @@
-* darts_experiments version or commit:
+* mhat version or commit:
 * Python version:
 * Operating System:
 
 ### Bug or feature?
 
-Are you reporting a bug or adding a new feature? Perhaps you want more documentation? 
+Are you reporting a bug or adding a new feature? Perhaps you want more documentation?
 Please tell us here and tag the issue appropriately.
 
 ### Description
 
-Describe the bug you want fixed, the feature you want to see, etc. 
+Describe the bug you want fixed, the feature you want to see, etc.
 If you are requesting a new feature, please say why you think that feature is important and belongs in this library, and any guesses on how to implement it.
 
 ### Example

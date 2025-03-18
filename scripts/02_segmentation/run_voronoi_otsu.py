@@ -2,14 +2,14 @@ import argparse
 from pathlib import Path
 
 import numpy as np
-from darts_utils.data import (
+from mhat.data import (
     RawDataZarr,
     SegmentationZarr,
     add_data_args,
     add_segmentation_args,
 )
-from darts_utils.experiment_metadata import get_experiment_metadata
-from darts_utils.segmentation.voronoi_otsu import voronoi_otsu_labeling
+from mhat.experiment_metadata import get_experiment_metadata
+from mhat.segmentation.voronoi_otsu import voronoi_otsu_labeling
 
 
 def segment_data(

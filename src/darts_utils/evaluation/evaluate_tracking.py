@@ -40,5 +40,6 @@ def evaluate_tracking(
         matcher=IOUMatcher(iou_threshold=iou_threshold, one_to_one=True),
         metrics=[CTCMetrics(), DivisionMetrics(max_frame_buffer=3)],
     )
+    results[0]["gt_edges"] = gt_graph.graph.number_of_edges()
 
     return results

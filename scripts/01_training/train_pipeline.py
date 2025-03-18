@@ -6,9 +6,9 @@ import gunpowder as gp
 import numpy as np
 import toml
 import torch
-from darts_utils.gunpowder import AddLocalShapeDescriptor, NoiseAugment
-from darts_utils.segmentation import MtlsdModel, WeightedMSELoss
 from gunpowder.torch import Train
+from mhat.gunpowder import AddLocalShapeDescriptor, NoiseAugment
+from mhat.segmentation import MtlsdModel, WeightedMSELoss
 from tqdm import tqdm
 
 

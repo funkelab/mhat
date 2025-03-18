@@ -5,8 +5,7 @@ from typing import TYPE_CHECKING
 
 import networkx as nx
 import zarr
-
-from darts_utils.tracking.utils import nodes_from_segmentation
+from mhat.tracking.utils import nodes_from_segmentation
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -22,6 +21,7 @@ def load_tracks_from_csv(csv_path: str | Path) -> nx.DiGraph:
                 "time": int(float(row["time"])),
                 "x": int(float(row["x"])),
                 "y": int(float(row["y"])),
+                "pos": [int(float(row["x"])), int(float(row["y"]))],
                 "label": node_id,
             }
             parent_id = int(float(row["parent_id"]))

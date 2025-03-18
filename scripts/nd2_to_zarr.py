@@ -1,12 +1,11 @@
-from pprint import pprint
 from dataclasses import asdict
-import ome_types
+from pprint import pprint
 
 import nd2
 import zarr
 
-infile = "/nrs/funke/data/darts/240411_phase_fluor/110424_LIB518_40xPh_epi.nd2"
-outfile = "/nrs/funke/data/darts/240411_phase_fluor/240411_phase_fluor.zarr"
+infile = "example/image.nd2"
+outfile = "example/image.zarr"
 outgroup = "raw"
 
 with nd2.ND2File(infile) as myfile:
@@ -23,7 +22,7 @@ with nd2.ND2File(infile) as myfile:
     data = myfile.to_dask().rechunk(chunks=(1, 1, 1, 740, 1264))
     print(data.chunksize)
 
-    num_fovs = myfile.shape[1] 
+    num_fovs = myfile.shape[1]
     for fov in range(num_fovs):
         fov_data = data[:, fov]
         fov_group = f"{fov}/{outgroup}"

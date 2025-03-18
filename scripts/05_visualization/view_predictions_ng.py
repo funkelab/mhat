@@ -6,7 +6,7 @@ import neuroglancer as ng
 import neuroglancer.cli as ngcli
 import numpy as np
 import zarr
-from darts_utils.segmentation import agglomerate
+from mhat.segmentation import agglomerate
 
 logger = logging.getLogger(__name__)
 

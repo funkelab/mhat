@@ -12,7 +12,7 @@ def segmentation_eval_info(dt):
     results = []
 
     for file_num in range(1, 101):
-        base_path = Path(f"/nrs/funke/data/darts/synthetic_data/test1/{file_num}/{dt}")
+        base_path = Path(f"/nrs/funke/data/mhat/synthetic_data/test1/{file_num}/{dt}")
 
         csv_file = base_path / "mask_eval.csv"
         with open(csv_file) as f:
@@ -51,7 +51,7 @@ def division_info(dt):
     total_FP = 0
     total_FN = 0
     for file_num in range(1, 101):
-        base_path = Path(f"/nrs/funke/data/darts/synthetic_data/test1/{file_num}/{dt}")
+        base_path = Path(f"/nrs/funke/data/mhat/synthetic_data/test1/{file_num}/{dt}")
         json_path = base_path / "track_metrics.json"
 
         with open(json_path) as f:
@@ -102,7 +102,7 @@ def average_TRA(dt):
     total_TRA = 0
     count = 0
     for file_num in range(1, 101):
-        base_path = Path(f"/nrs/funke/data/darts/synthetic_data/test1/{file_num}/{dt}")
+        base_path = Path(f"/nrs/funke/data/mhat/synthetic_data/test1/{file_num}/{dt}")
         json_path = base_path / "track_metrics.json"
 
         with open(json_path) as f:
@@ -121,9 +121,9 @@ def average_TRA(dt):
 
 if __name__ in "__main__":
     dt = "2024-08-09_15-40-36"
-    # making_dir = os.mkdir(f"/nrs/funke/data/darts/synthetic_data/test1/results")
-    make_dir = os.mkdir(f"/nrs/funke/data/darts/synthetic_data/test1/results/{dt}")
-    json_path = f"/nrs/funke/data/darts/synthetic_data/test1/results/{dt}/evaluation_metrics.json"
+    # making_dir = os.mkdir(f"/nrs/funke/data/mhat/synthetic_data/test1/results")
+    make_dir = os.mkdir(f"/nrs/funke/data/mhat/synthetic_data/test1/results/{dt}")
+    json_path = f"/nrs/funke/data/mhat/synthetic_data/test1/results/{dt}/evaluation_metrics.json"
 
     # try:
     #     os.makedirs(json_path)
